@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Mail, Phone, MapPin, Facebook, Instagram, Twitter, Linkedin, Youtube, Heart } from 'lucide-react';
-import { db } from '../lib/firebase';
-import { ref, get } from 'firebase/database';
+import { usePublishedData } from '../contexts/PublishedDataContext';
 
 interface FooterConfig {
   is_visible: boolean;
@@ -35,24 +34,10 @@ interface FooterProps {
 }
 
 export default function Footer({ onNavigate }: FooterProps) {
-  const [config, setConfig] = useState<FooterConfig | null>(null);
+  const { data: publishedData } = usePublishedData();
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchFooterConfig = async () => {
-      try {
-        const footerRef = ref(db, 'footer_config');
-        const snapshot = await get(footerRef);
-        if (snapshot.exists()) {
-          setConfig(snapshot.val());
-        }
-      } catch (error) {
-        console.error('Error fetching footer config:', error);
-      }
-    };
-
-    fetchFooterConfig();
-  }, []);
+  
+  const config = publishedData?.footer_config as FooterConfig | null;
 
   if (!config || !config.is_visible) {
     return null;
@@ -220,6 +205,11 @@ export default function Footer({ onNavigate }: FooterProps) {
             <p className="text-sm text-center md:text-left">{config.copyrightText}</p>
             <p className="text-sm flex items-center gap-1">
               Made with <Heart size={16} style={{ color: config.accentColor }} fill={config.accentColor} /> for you
+            </p>
+          </div>
+          <div className="text-center mt-4 pt-4" style={{ borderColor: config.accentColor + '20', borderTopWidth: '1px' }}>
+            <p className="text-xs" style={{ color: config.textColor, opacity: 0.7 }}>
+              Crafted by <a href="https://tagyverse.com" target="_blank" rel="noopener noreferrer" className="font-semibold hover:opacity-100" style={{ color: config.linkColor }}>Tagyverse</a>
             </p>
           </div>
         </div>

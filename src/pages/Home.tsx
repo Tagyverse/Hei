@@ -22,6 +22,7 @@ import DynamicSection from '../components/DynamicSection';
 import InfoSection from '../components/InfoSection';
 import VideoSection from '../components/VideoSection';
 import VideoOverlaySection from '../components/VideoOverlaySection';
+import { getPublishedData, objectToArray } from '../utils/publishedData';
 import type { HomepageSection } from '../types';
 
 interface InfoSectionData {
@@ -117,259 +118,194 @@ export default function Home({ onNavigate, onCartClick }: HomeProps) {
   useEffect(() => {
     async function fetchData() {
       try {
-        const productsRef = ref(db, 'products');
-        const categoriesRef = ref(db, 'categories');
-        const carouselRef = ref(db, 'carousel_images');
-        const carouselSettingsRef = ref(db, 'carousel_settings');
+        console.log('[HOME] Starting data fetch...');
+        
+        // Try to load from R2 first (published data for users)
+        const publishedData = await getPublishedData();
+        
+        if (publishedData) {
+          console.log('[HOME] Published data loaded successfully');
+          
+          // Use published data from R2
+          const allProducts: Product[] = objectToArray<Product>(publishedData.products);
+          console.log(`[HOME] Loaded ${allProducts.length} products`);
 
-        const [productsSnapshot, categoriesSnapshot, carouselSnapshot, carouselSettingsSnapshot] = await Promise.all([
-          get(productsRef),
-          get(categoriesRef),
-          get(carouselRef),
-          get(carouselSettingsRef)
-        ]);
+          const featuredProducts = allProducts
+            .filter(p => p.featured)
+            .sort((a, b) => {
+              const dateA = new Date(a.createdAt || 0).getTime();
+              const dateB = new Date(b.createdAt || 0).getTime();
+              return dateB - dateA;
+            })
+            .slice(0, 3);
 
-        const allProducts: Product[] = [];
-        if (productsSnapshot.exists()) {
-          const data = productsSnapshot.val();
-          Object.keys(data).forEach(key => {
-            allProducts.push({ id: key, ...data[key] });
-          });
-        }
-
-        const featuredProducts = allProducts
-          .filter(p => p.featured)
-          .sort((a, b) => {
-            const dateA = new Date(a.createdAt || 0).getTime();
-            const dateB = new Date(b.createdAt || 0).getTime();
-            return dateB - dateA;
-          })
-          .slice(0, 3);
-
-        const categoriesData: Category[] = [];
-        const newArrivals: Category[] = [];
-        if (categoriesSnapshot.exists()) {
-          const data = categoriesSnapshot.val();
-          Object.keys(data).forEach(key => {
-            const category = { id: key, ...data[key] };
-            categoriesData.push(category);
-            if (category.new_arrival) {
-              newArrivals.push(category);
-            }
-          });
+          const categoriesData: Category[] = objectToArray<Category>(publishedData.categories);
+          const newArrivals = categoriesData.filter(c => c.new_arrival);
           categoriesData.sort((a, b) => a.name.localeCompare(b.name));
           newArrivals.sort((a, b) => a.name.localeCompare(b.name));
-        }
 
-        if (carouselSnapshot.exists()) {
-          const data = carouselSnapshot.val();
-          const images = Object.keys(data)
-            .map(key => ({ ...data[key], id: key }))
-            .filter(img => img.isVisible)
-            .sort((a, b) => a.order - b.order)
-            .map(img => img.url);
-          if (images.length > 0) {
-            setCarouselImages(images);
-          }
-        }
-
-        if (carouselSettingsSnapshot.exists()) {
-          setCarouselSettings(carouselSettingsSnapshot.val());
-        }
-
-        const sectionsSnapshot = await get(ref(db, 'homepage_sections'));
-        const sectionsData: HomepageSection[] = [];
-        if (sectionsSnapshot.exists()) {
-          const data = sectionsSnapshot.val();
-          Object.entries(data).forEach(([id, sectionData]: [string, any]) => {
-            if (sectionData.is_visible) {
-              sectionsData.push({ id, ...sectionData });
-            }
-          });
-        }
-        setDynamicSections(sectionsData);
-
-        const infoSectionsSnapshot = await get(ref(db, 'info_sections'));
-        const infoSectionsData: InfoSectionData[] = [];
-        if (infoSectionsSnapshot.exists()) {
-          const data = infoSectionsSnapshot.val();
-          Object.entries(data).forEach(([id, sectionData]: [string, any]) => {
-            if (sectionData.is_visible) {
-              infoSectionsData.push({ id, ...sectionData });
-            }
-          });
-        }
-        setInfoSections(infoSectionsData);
-
-        const marqueeSectionsSnapshot = await get(ref(db, 'marquee_sections'));
-        const marqueeSectionsData: any[] = [];
-        if (marqueeSectionsSnapshot.exists()) {
-          const data = marqueeSectionsSnapshot.val();
-          Object.entries(data).forEach(([id, sectionData]: [string, any]) => {
-            if (sectionData.is_visible) {
-              marqueeSectionsData.push({ id, ...sectionData });
-            }
-          });
-        }
-        setMarqueeSections(marqueeSectionsData);
-
-        const videoSectionsSnapshot = await get(ref(db, 'video_sections'));
-        const videoSectionsData: any[] = [];
-        if (videoSectionsSnapshot.exists()) {
-          const data = videoSectionsSnapshot.val();
-          Object.entries(data).forEach(([id, videoData]: [string, any]) => {
-            if (videoData.isVisible) {
-              videoSectionsData.push({ id, ...videoData });
-            }
-          });
-          videoSectionsData.sort((a, b) => a.order - b.order);
-        }
-        setVideoSections(videoSectionsData);
-
-        const videoSectionSettingsSnapshot = await get(ref(db, 'video_section_settings'));
-        let videoSettings = {
-          is_visible: false,
-          section_title: 'Watch Our Videos',
-          section_subtitle: 'Explore our collection',
-          order_index: 7
-        };
-        if (videoSectionSettingsSnapshot.exists()) {
-          videoSettings = { ...videoSettings, ...videoSectionSettingsSnapshot.val() };
-          setVideoSectionSettings(videoSettings);
-        }
-
-        const videoOverlaySectionsSnapshot = await get(ref(db, 'video_overlay_sections'));
-        const videoOverlaySectionsData: any[] = [];
-        if (videoOverlaySectionsSnapshot.exists()) {
-          const data = videoOverlaySectionsSnapshot.val();
-          for (const [sectionId, sectionData] of Object.entries<any>(data)) {
-            if (sectionData.is_visible && sectionData.videos) {
-              const videoItemsSnapshot = await get(ref(db, 'video_overlay_items'));
-              const sectionVideos: any[] = [];
-              if (videoItemsSnapshot.exists()) {
-                const videosData = videoItemsSnapshot.val();
-                sectionData.videos.forEach((videoId: string) => {
-                  if (videosData[videoId] && videosData[videoId].isVisible) {
-                    sectionVideos.push({ id: videoId, ...videosData[videoId] });
-                  }
-                });
-                sectionVideos.sort((a, b) => a.order - b.order);
-              }
-              if (sectionVideos.length > 0) {
-                videoOverlaySectionsData.push({
-                  id: sectionId,
-                  ...sectionData,
-                  videoItems: sectionVideos
-                });
-              }
+          if (publishedData.carousel_images) {
+            const images = Object.keys(publishedData.carousel_images)
+              .map(key => ({ ...publishedData.carousel_images![key], id: key }))
+              .filter(img => img.isVisible)
+              .sort((a, b) => a.order - b.order)
+              .map(img => img.url);
+            if (images.length > 0) {
+              setCarouselImages(images);
             }
           }
-          videoOverlaySectionsData.sort((a, b) => a.order_index - b.order_index);
+
+          if (publishedData.carousel_settings) {
+            setCarouselSettings(publishedData.carousel_settings);
+          }
+
+          const sectionsData: HomepageSection[] = [];
+          if (publishedData.homepage_sections) {
+            Object.entries(publishedData.homepage_sections).forEach(([id, sectionData]: [string, any]) => {
+              if (sectionData.is_visible) {
+                sectionsData.push({ id, ...sectionData });
+              }
+            });
+          }
+          setDynamicSections(sectionsData);
+
+          const infoSectionsData: InfoSectionData[] = [];
+          if (publishedData.info_sections) {
+            Object.entries(publishedData.info_sections).forEach(([id, sectionData]: [string, any]) => {
+              if (sectionData.is_visible) {
+                infoSectionsData.push({ id, ...sectionData });
+              }
+            });
+          }
+          setInfoSections(infoSectionsData);
+
+          const marqueeSectionsData: any[] = [];
+          if (publishedData.marquee_sections) {
+            Object.entries(publishedData.marquee_sections).forEach(([id, sectionData]: [string, any]) => {
+              if (sectionData.is_visible) {
+                marqueeSectionsData.push({ id, ...sectionData });
+              }
+            });
+          }
+          setMarqueeSections(marqueeSectionsData);
+
+          const videoSectionsData: any[] = [];
+          if (publishedData.video_sections) {
+            Object.entries(publishedData.video_sections).forEach(([id, videoData]: [string, any]) => {
+              if (videoData.isVisible) {
+                videoSectionsData.push({ id, ...videoData });
+              }
+            });
+            videoSectionsData.sort((a, b) => a.order - b.order);
+          }
+          setVideoSections(videoSectionsData);
+
+          let videoSettings = {
+            is_visible: false,
+            section_title: 'Watch Our Videos',
+            section_subtitle: 'Explore our collection',
+            order_index: 7
+          };
+          if (publishedData.video_section_settings) {
+            videoSettings = { ...videoSettings, ...publishedData.video_section_settings };
+            setVideoSectionSettings(videoSettings);
+          }
+
+          const videoOverlaySectionsData: any[] = [];
+          if (publishedData.video_overlay_sections) {
+            for (const [sectionId, sectionData] of Object.entries<any>(publishedData.video_overlay_sections)) {
+              if (sectionData.is_visible && sectionData.videos) {
+                const sectionVideos: any[] = [];
+                if (publishedData.video_overlay_items) {
+                  sectionData.videos.forEach((videoId: string) => {
+                    if (publishedData.video_overlay_items![videoId] && publishedData.video_overlay_items![videoId].isVisible) {
+                      sectionVideos.push({ id: videoId, ...publishedData.video_overlay_items![videoId] });
+                    }
+                  });
+                  sectionVideos.sort((a, b) => a.order - b.order);
+                }
+                if (sectionVideos.length > 0) {
+                  videoOverlaySectionsData.push({
+                    id: sectionId,
+                    ...sectionData,
+                    videoItems: sectionVideos
+                  });
+                }
+              }
+            }
+            videoOverlaySectionsData.sort((a, b) => a.order_index - b.order_index);
+          }
+          setVideoOverlaySections(videoOverlaySectionsData);
+
+          if (publishedData.default_sections_visibility) {
+            const visibility = publishedData.default_sections_visibility;
+            setDefaultSectionsVisibility({
+              banner_social: visibility.banner_social !== undefined ? visibility.banner_social : true,
+              feature_boxes: visibility.feature_boxes !== undefined ? visibility.feature_boxes : true,
+              all_categories: visibility.all_categories !== undefined ? visibility.all_categories : true,
+              best_sellers: visibility.best_sellers !== undefined ? visibility.best_sellers : true,
+              might_you_like: visibility.might_you_like !== undefined ? visibility.might_you_like : true,
+              shop_by_category: visibility.shop_by_category !== undefined ? visibility.shop_by_category : true,
+              customer_reviews: visibility.customer_reviews !== undefined ? visibility.customer_reviews : true,
+              marquee: visibility.marquee !== undefined ? visibility.marquee : true
+            });
+
+            setShowSmartFeatureFAB(visibility.smart_feature_fab !== undefined ? visibility.smart_feature_fab : false);
+
+            const defaultSections = [
+              { id: 'banner_social', type: 'default' as const, order_index: visibility.order_banner_social ?? -1 },
+              { id: 'feature_boxes', type: 'default' as const, order_index: visibility.order_feature_boxes ?? 0 },
+              { id: 'all_categories', type: 'default' as const, order_index: visibility.order_all_categories ?? 1 },
+              { id: 'best_sellers', type: 'default' as const, order_index: visibility.order_best_sellers ?? 2 },
+              { id: 'might_you_like', type: 'default' as const, order_index: visibility.order_might_you_like ?? 3 },
+              { id: 'shop_by_category', type: 'default' as const, order_index: visibility.order_shop_by_category ?? 4 },
+              { id: 'customer_reviews', type: 'default' as const, order_index: visibility.order_customer_reviews ?? 5 },
+              { id: 'marquee', type: 'default' as const, order_index: visibility.order_marquee ?? 6 }
+            ];
+
+            const customSections = sectionsData.map(s => ({
+              id: s.id,
+              type: 'custom' as const,
+              order_index: s.order_index
+            }));
+
+            const infoSectionsOrder = infoSectionsData.map(s => ({
+              id: s.id,
+              type: 'info' as const,
+              order_index: s.order_index
+            }));
+
+            const marqueeSectionsOrder = marqueeSectionsData.map(s => ({
+              id: s.id,
+              type: 'marquee' as const,
+              order_index: s.order_index
+            }));
+
+            const videoSectionsOrder = videoSectionsData.length > 0 && videoSettings.is_visible ? [{
+              id: 'video_section',
+              type: 'video' as const,
+              order_index: videoSettings.order_index ?? 7
+            }] : [];
+
+            const allSections = [...defaultSections, ...customSections, ...infoSectionsOrder, ...marqueeSectionsOrder, ...videoSectionsOrder];
+            allSections.sort((a, b) => a.order_index - b.order_index);
+            setAllSectionsOrder(allSections);
+          }
+
+          setFeaturedProducts(featuredProducts);
+          setCategories(categoriesData.slice(0, 4));
+          setNewArrivalCategories(newArrivals);
+          setLoading(false);
+          console.log('[HOME] Data loading complete');
+          return;
         }
-        setVideoOverlaySections(videoOverlaySectionsData);
 
-        const defaultSectionsRef = ref(db, 'default_sections_visibility');
-        const defaultSectionsSnapshot = await get(defaultSectionsRef);
-        if (defaultSectionsSnapshot.exists()) {
-          const visibility = defaultSectionsSnapshot.val();
-          setDefaultSectionsVisibility({
-            banner_social: visibility.banner_social !== undefined ? visibility.banner_social : true,
-            feature_boxes: visibility.feature_boxes !== undefined ? visibility.feature_boxes : true,
-            all_categories: visibility.all_categories !== undefined ? visibility.all_categories : true,
-            best_sellers: visibility.best_sellers !== undefined ? visibility.best_sellers : true,
-            might_you_like: visibility.might_you_like !== undefined ? visibility.might_you_like : true,
-            shop_by_category: visibility.shop_by_category !== undefined ? visibility.shop_by_category : true,
-            customer_reviews: visibility.customer_reviews !== undefined ? visibility.customer_reviews : true,
-            marquee: visibility.marquee !== undefined ? visibility.marquee : true
-          });
-
-          setShowSmartFeatureFAB(visibility.smart_feature_fab !== undefined ? visibility.smart_feature_fab : false);
-
-          const defaultSections = [
-            { id: 'banner_social', type: 'default' as const, order_index: visibility.order_banner_social ?? -1 },
-            { id: 'feature_boxes', type: 'default' as const, order_index: visibility.order_feature_boxes ?? 0 },
-            { id: 'all_categories', type: 'default' as const, order_index: visibility.order_all_categories ?? 1 },
-            { id: 'best_sellers', type: 'default' as const, order_index: visibility.order_best_sellers ?? 2 },
-            { id: 'might_you_like', type: 'default' as const, order_index: visibility.order_might_you_like ?? 3 },
-            { id: 'shop_by_category', type: 'default' as const, order_index: visibility.order_shop_by_category ?? 4 },
-            { id: 'customer_reviews', type: 'default' as const, order_index: visibility.order_customer_reviews ?? 5 },
-            { id: 'marquee', type: 'default' as const, order_index: visibility.order_marquee ?? 6 }
-          ];
-
-          const customSections = sectionsData.map(s => ({
-            id: s.id,
-            type: 'custom' as const,
-            order_index: s.order_index
-          }));
-
-          const infoSectionsOrder = infoSectionsData.map(s => ({
-            id: s.id,
-            type: 'info' as const,
-            order_index: s.order_index
-          }));
-
-          const marqueeSectionsOrder = marqueeSectionsData.map(s => ({
-            id: s.id,
-            type: 'marquee' as const,
-            order_index: s.order_index
-          }));
-
-          const videoSectionsOrder = videoSectionsData.length > 0 && videoSettings.is_visible ? [{
-            id: 'video_section',
-            type: 'video' as const,
-            order_index: videoSettings.order_index ?? 7
-          }] : [];
-
-          const allSections = [...defaultSections, ...customSections, ...infoSectionsOrder, ...marqueeSectionsOrder, ...videoSectionsOrder];
-          allSections.sort((a, b) => a.order_index - b.order_index);
-          setAllSectionsOrder(allSections);
-        } else {
-          const defaultSections = [
-            { id: 'banner_social', type: 'default' as const, order_index: -1 },
-            { id: 'feature_boxes', type: 'default' as const, order_index: 0 },
-            { id: 'all_categories', type: 'default' as const, order_index: 1 },
-            { id: 'best_sellers', type: 'default' as const, order_index: 2 },
-            { id: 'might_you_like', type: 'default' as const, order_index: 3 },
-            { id: 'shop_by_category', type: 'default' as const, order_index: 4 },
-            { id: 'customer_reviews', type: 'default' as const, order_index: 5 },
-            { id: 'marquee', type: 'default' as const, order_index: 6 }
-          ];
-
-          const customSections = sectionsData.map(s => ({
-            id: s.id,
-            type: 'custom' as const,
-            order_index: s.order_index
-          }));
-
-          const infoSectionsOrder = infoSectionsData.map(s => ({
-            id: s.id,
-            type: 'info' as const,
-            order_index: s.order_index
-          }));
-
-          const marqueeSectionsOrder = marqueeSectionsData.map(s => ({
-            id: s.id,
-            type: 'marquee' as const,
-            order_index: s.order_index
-          }));
-
-          const videoSectionsOrder = videoSectionsData.length > 0 && videoSettings.is_visible ? [{
-            id: 'video_section',
-            type: 'video' as const,
-            order_index: videoSettings.order_index ?? 7
-          }] : [];
-
-          const allSections = [...defaultSections, ...customSections, ...infoSectionsOrder, ...marqueeSectionsOrder, ...videoSectionsOrder];
-          allSections.sort((a, b) => a.order_index - b.order_index);
-          setAllSectionsOrder(allSections);
-        }
-
-        setFeaturedProducts(featuredProducts);
-        setCategories(categoriesData.slice(0, 4));
-        setNewArrivalCategories(newArrivals);
+        // No published data available - will show Coming Soon page
+        console.log('[HOME] No published data available - showing coming soon page');
+        setLoading(false);
       } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
+        console.error('[HOME] Error fetching data:', error);
+        console.log('[HOME] Failed to load data, showing coming soon page');
         setLoading(false);
       }
     }

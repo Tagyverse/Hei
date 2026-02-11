@@ -1,4 +1,8 @@
+'use client';
+
+import { createPortal } from 'react-dom';
 import { X, Filter, ShoppingBag } from 'lucide-react';
+import { useModalScroll } from '../hooks/useModalScroll';
 import type { Category } from '../types';
 
 interface FilterBottomSheetProps {
@@ -28,20 +32,22 @@ export default function FilterBottomSheet({
   sortBy,
   onSortChange
 }: FilterBottomSheetProps) {
+  useModalScroll(isOpen);
+
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 transition-all duration-300">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] transition-all duration-300">
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
         onClick={onClose}
       />
 
-      <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] overflow-hidden transition-transform duration-300 translate-y-0">
+      <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85dvh] overflow-hidden transition-transform duration-300 translate-y-0">
         <div className="sticky top-0 z-10 bg-gradient-to-r from-teal-500 to-teal-600 px-6 py-4 flex items-center justify-between rounded-t-3xl">
           <div className="flex items-center gap-3">
             <Filter className="w-6 h-6 text-white" />
-            <h2 className="text-xl font-bold text-white">Filter & Sort</h2>
+            <h2 className="text-xl font-bold text-white">{'Filter & Sort'}</h2>
           </div>
           <button
             onClick={onClose}
@@ -51,7 +57,7 @@ export default function FilterBottomSheet({
           </button>
         </div>
 
-        <div className="overflow-y-auto max-h-[calc(85vh-5rem)] pb-6">
+        <div className="overflow-y-auto max-h-[calc(85dvh-5rem)] pb-6" style={{ overscrollBehavior: 'contain' }}>
           <div className="p-6 space-y-6">
             <div className="bg-white rounded-2xl p-5 border-2 border-teal-200">
               <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -149,4 +155,6 @@ export default function FilterBottomSheet({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

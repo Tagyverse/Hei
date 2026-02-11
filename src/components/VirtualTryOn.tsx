@@ -1,600 +1,252 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { X, RotateCw, ZoomIn, ZoomOut, AlertCircle, RefreshCw, Video, Image as ImageIcon } from 'lucide-react';
-import { ref as dbRef, get } from 'firebase/database';
-import { db } from '../lib/firebase';
+import { useState, useEffect, useRef } from 'react';
+import { X, Upload, Download, RotateCcw, ZoomIn, ZoomOut, ArrowLeft } from 'lucide-react';
+import { usePublishedData } from '../contexts/PublishedDataContext';
+import { objectToArray } from '../utils/publishedData';
 import { Product, TryOnModel } from '../types';
 
 interface VirtualTryOnProps {
   isOpen: boolean;
   onClose: () => void;
-  product: Product;
+  product?: Product | null;
+  onBack?: () => void;
 }
 
-interface ErrorDialogProps {
-  isOpen: boolean;
-  title: string;
-  message: string;
-  onClose: () => void;
-  onRetry?: () => void;
-}
-
-function ErrorDialog({ isOpen, title, message, onClose, onRetry }: ErrorDialogProps) {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-[110] flex items-end md:items-center justify-center bg-black bg-opacity-75">
-      <div className="bg-white rounded-t-2xl md:rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in slide-in-from-bottom md:fade-in md:zoom-in duration-300">
-        <div className="bg-red-500 p-4 md:p-6 flex items-center gap-3 md:gap-4">
-          <div className="bg-white rounded-full p-2 md:p-3">
-            <AlertCircle className="w-6 h-6 md:w-8 md:h-8 text-red-500" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-lg md:text-xl font-bold text-white">{title}</h3>
-          </div>
-        </div>
-        <div className="p-4 md:p-6">
-          <p className="text-gray-700 text-sm md:text-base leading-relaxed mb-4 md:mb-6 whitespace-pre-line">{message}</p>
-          <div className="flex gap-2 md:gap-3">
-            {onRetry && (
-              <button
-                onClick={onRetry}
-                className="flex-1 bg-blue-500 text-white py-2.5 md:py-3 px-4 md:px-6 rounded-xl text-sm md:text-base font-semibold hover:bg-blue-600 transition-colors duration-200 flex items-center justify-center gap-2"
-              >
-                <RefreshCw className="w-4 h-4 md:w-5 md:h-5" />
-                Retry
-              </button>
-            )}
-            <button
-              onClick={onClose}
-              className="flex-1 bg-red-500 text-white py-2.5 md:py-3 px-4 md:px-6 rounded-xl text-sm md:text-base font-semibold hover:bg-red-600 transition-colors duration-200"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function VirtualTryOn({ isOpen, onClose, product }: VirtualTryOnProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const modelImageRef = useRef<HTMLImageElement>(null);
-  const productImageRef = useRef<HTMLImageElement | null>(null);
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [isProductImageLoaded, setIsProductImageLoaded] = useState(false);
-  const [error, setError] = useState<{ title: string; message: string } | null>(null);
-  const [isCameraReady, setIsCameraReady] = useState(false);
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
-  const [showErrorDialog, setShowErrorDialog] = useState(false);
-  const [productImageUrl, setProductImageUrl] = useState<string>('');
-  const [imageTransform, setImageTransform] = useState({ x: 0, y: 0, scale: 1 });
+export default function VirtualTryOn({ isOpen, onClose, product, onBack }: VirtualTryOnProps) {
+  const { data: publishedData } = usePublishedData();
+  const [userImage, setUserImage] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<TryOnModel | null>(null);
+  const [models, setModels] = useState<TryOnModel[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [scale, setScale] = useState(1);
+  const [rotation, setRotation] = useState(0);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [lastPinchDistance, setLastPinchDistance] = useState<number | null>(null);
-
-  const [useLiveCamera, setUseLiveCamera] = useState(true);
-  const [models, setModels] = useState<TryOnModel[]>([]);
-  const [selectedModel, setSelectedModel] = useState<TryOnModel | null>(null);
-  const [showModelSelector, setShowModelSelector] = useState(false);
-
-  const streamRef = useRef<MediaStream | null>(null);
-  const isMountedRef = useRef(true);
-  const hasInitializedRef = useRef(false);
-  const currentFacingModeRef = useRef<'user' | 'environment'>('user');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const productImageRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
-    loadModels();
-  }, []);
-
-  const loadModels = async () => {
-    try {
-      const modelsRef = dbRef(db, 'try_on_models');
-      const snapshot = await get(modelsRef);
-
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        const modelsList = Object.entries(data)
-          .map(([id, modelData]: [string, any]) => ({
-            id,
-            ...modelData
-          }))
-          .filter((model: TryOnModel) => model.is_active)
-          .sort((a: TryOnModel, b: TryOnModel) => (a.order_index || 0) - (b.order_index || 0)) as TryOnModel[];
-
-        setModels(modelsList);
-        if (modelsList.length > 0) {
-          setSelectedModel(modelsList[0]);
-        }
+    if (publishedData?.try_on_models) {
+      const modelsArray = objectToArray<TryOnModel>(publishedData.try_on_models);
+      setModels(modelsArray);
+      if (modelsArray.length > 0 && !selectedModel) {
+        setSelectedModel(modelsArray[0]);
       }
-    } catch (error) {
-      console.error('Error loading models:', error);
+    }
+  }, [publishedData]);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setUserImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const loadProductImage = useCallback(() => {
-    setIsProductImageLoaded(false);
-    const tryOnImage = product.try_on_image_url || product.image_url;
+  const handleDownload = () => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-    const img = new Image();
-    const isFirebaseUrl = tryOnImage.includes('firebasestorage.googleapis.com');
+    canvas.width = 800;
+    canvas.height = 1000;
 
-    if (!isFirebaseUrl) {
-      img.crossOrigin = 'anonymous';
-    }
+    const bgImage = new Image();
+    bgImage.crossOrigin = 'anonymous';
+    bgImage.src = selectedModel?.image_url || '';
 
-    img.onload = () => {
-      if (!isMountedRef.current) return;
-      productImageRef.current = img;
-      setProductImageUrl(tryOnImage);
-      setIsProductImageLoaded(true);
+    bgImage.onload = () => {
+      ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+
+      if (product && productImageRef.current) {
+        const productImg = productImageRef.current;
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        ctx.save();
+        ctx.translate(centerX + position.x, centerY + position.y);
+        ctx.rotate((rotation * Math.PI) / 180);
+        ctx.scale(scale, scale);
+        ctx.drawImage(
+          productImg,
+          -productImg.width / 2,
+          -productImg.height / 2
+        );
+        ctx.restore();
+      }
+
+      const link = document.createElement('a');
+      link.download = 'virtual-try-on.png';
+      link.href = canvas.toDataURL();
+      link.click();
     };
+  };
 
-    img.onerror = () => {
-      console.error('Failed to load product image');
-      setIsProductImageLoaded(false);
-      setError({
-        title: 'Image Load Error',
-        message: 'Failed to load product image. Please try another product.'
-      });
-      setShowErrorDialog(true);
-    };
+  const handleReset = () => {
+    setScale(1);
+    setRotation(0);
+    setPosition({ x: 0, y: 0 });
+  };
 
-    img.src = tryOnImage;
-  }, [product]);
-
-  const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => {
-        track.stop();
-      });
-      streamRef.current = null;
-    }
-
-    if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.srcObject = null;
-    }
-
-    setIsCameraReady(false);
-  }, []);
-
-  const startCamera = useCallback(async () => {
-    if (!isMountedRef.current) return;
-
-    try {
-      setIsLoading(true);
-      setError(null);
-      setShowErrorDialog(false);
-      setIsCameraReady(false);
-
-      if (!videoRef.current) {
-        throw new Error('Video element not ready');
-      }
-
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera API not supported on this browser.\n\nPlease use a modern browser like Chrome, Firefox, Safari, or Edge.');
-      }
-
-      stopCamera();
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      const currentMode = currentFacingModeRef.current;
-
-      const constraints = {
-        video: {
-          facingMode: currentMode,
-          width: { ideal: 1280, min: 640 },
-          height: { ideal: 720, min: 480 },
-        },
-        audio: false,
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      if (!isMountedRef.current) {
-        stream.getTracks().forEach(track => track.stop());
-        return;
-      }
-
-      streamRef.current = stream;
-      videoRef.current.srcObject = stream;
-
-      await new Promise<void>((resolve) => {
-        if (!videoRef.current) {
-          resolve();
-          return;
-        }
-
-        videoRef.current.onloadedmetadata = () => {
-          if (videoRef.current) {
-            videoRef.current.play().then(() => {
-              setIsCameraReady(true);
-              setIsLoading(false);
-              resolve();
-            }).catch(err => {
-              console.error('Error playing video:', err);
-              resolve();
-            });
-          } else {
-            resolve();
-          }
-        };
-      });
-    } catch (err: any) {
-      console.error('Camera error:', err);
-      setError({
-        title: 'Camera Access Error',
-        message: err.message || 'Failed to access camera. Please check permissions and try again.'
-      });
-      setShowErrorDialog(true);
-      setIsLoading(false);
-    }
-  }, [stopCamera]);
-
-  const flipCamera = useCallback(() => {
-    const newMode = currentFacingModeRef.current === 'user' ? 'environment' : 'user';
-    currentFacingModeRef.current = newMode;
-    setFacingMode(newMode);
-    hasInitializedRef.current = false;
-    startCamera();
-  }, [startCamera]);
-
-  const handleClose = useCallback(() => {
-    stopCamera();
-    hasInitializedRef.current = false;
-    setIsProductImageLoaded(false);
-    setProductImageUrl('');
-    onClose();
-  }, [stopCamera, onClose]);
-
-  const handleRetry = useCallback(() => {
-    setShowErrorDialog(false);
-    setError(null);
-    if (useLiveCamera) {
-      startCamera();
-    }
-  }, [startCamera, useLiveCamera]);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
-    setDragStart({ x: e.clientX - imageTransform.x, y: e.clientY - imageTransform.y });
-  }, [imageTransform]);
+    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+  };
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging) return;
-    setImageTransform(prev => ({
-      ...prev,
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y
-    }));
-  }, [isDragging, dragStart]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      setIsDragging(true);
-      setDragStart({
-        x: e.touches[0].clientX - imageTransform.x,
-        y: e.touches[0].clientY - imageTransform.y
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      setPosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y,
       });
-    } else if (e.touches.length === 2) {
-      setIsDragging(false);
-      const distance = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      setLastPinchDistance(distance);
     }
-  }, [imageTransform]);
+  };
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    e.preventDefault();
-
-    if (e.touches.length === 1 && isDragging) {
-      setImageTransform(prev => ({
-        ...prev,
-        x: e.touches[0].clientX - dragStart.x,
-        y: e.touches[0].clientY - dragStart.y
-      }));
-    } else if (e.touches.length === 2 && lastPinchDistance) {
-      const distance = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      const scaleDelta = distance / lastPinchDistance;
-      setImageTransform(prev => ({
-        ...prev,
-        scale: Math.max(0.5, Math.min(3, prev.scale * scaleDelta))
-      }));
-      setLastPinchDistance(distance);
-    }
-  }, [isDragging, dragStart, lastPinchDistance]);
-
-  const handleTouchEnd = useCallback(() => {
+  const handleMouseUp = () => {
     setIsDragging(false);
-    setLastPinchDistance(null);
-  }, []);
-
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const scaleDelta = e.deltaY > 0 ? 0.95 : 1.05;
-    setImageTransform(prev => ({
-      ...prev,
-      scale: Math.max(0.5, Math.min(3, prev.scale * scaleDelta))
-    }));
-  }, []);
-
-  const smoothZoom = useCallback((targetScale: number) => {
-    setImageTransform(prev => {
-      const newScale = Math.max(0.5, Math.min(3, targetScale));
-      return { ...prev, scale: newScale };
-    });
-  }, []);
-
-  const toggleBackgroundMode = useCallback(() => {
-    const newMode = !useLiveCamera;
-
-    setError(null);
-    setShowErrorDialog(false);
-    setIsLoading(true);
-    hasInitializedRef.current = false;
-
-    setUseLiveCamera(newMode);
-
-    if (newMode) {
-      setTimeout(() => {
-        if (isMountedRef.current) {
-          hasInitializedRef.current = true;
-          startCamera();
-        }
-      }, 300);
-    } else {
-      stopCamera();
-      setTimeout(() => {
-        if (isMountedRef.current) {
-          setIsLoading(false);
-          hasInitializedRef.current = true;
-        }
-      }, 300);
-    }
-  }, [useLiveCamera, startCamera, stopCamera]);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-      hasInitializedRef.current = false;
-      stopCamera();
-    };
-  }, [stopCamera]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      hasInitializedRef.current = false;
-      stopCamera();
-      return;
-    }
-
-    if (hasInitializedRef.current) return;
-
-    setIsLoading(true);
-    loadProductImage();
-
-    if (useLiveCamera) {
-      const timer = setTimeout(() => {
-        if (isMountedRef.current && !hasInitializedRef.current) {
-          hasInitializedRef.current = true;
-          startCamera();
-        }
-      }, 300);
-      return () => clearTimeout(timer);
-    } else {
-      setIsLoading(false);
-      hasInitializedRef.current = true;
-    }
-  }, [isOpen, loadProductImage, startCamera, stopCamera, useLiveCamera]);
+  };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black">
-      <div className="relative h-full w-full">
-        {useLiveCamera ? (
-          <video
-            ref={videoRef}
-            className="absolute inset-0 w-full h-full object-cover"
-            playsInline
-            muted
-            autoPlay
-          />
-        ) : selectedModel ? (
-          <img
-            ref={modelImageRef}
-            src={selectedModel.image_url}
-            alt={selectedModel.name}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
-            <p className="text-white text-lg">No model selected</p>
-          </div>
-        )}
-
-        {productImageUrl && isProductImageLoaded && !isLoading && (useLiveCamera ? isCameraReady : true) && (
-          <div
-            className="absolute inset-0 flex items-center justify-center select-none"
-            style={{
-              zIndex: 11,
-              touchAction: 'none'
-            }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            onWheel={handleWheel}
-          >
-            <div className="relative">
-              <img
-                src={productImageUrl}
-                alt="Product Preview"
-                className="object-contain"
-                style={{
-                  width: '300px',
-                  height: '300px',
-                  transform: `translate3d(${imageTransform.x}px, ${imageTransform.y}px, 0) scale(${imageTransform.scale})`,
-                  cursor: isDragging ? 'grabbing' : 'grab',
-                  userSelect: 'none',
-                  WebkitUserSelect: 'none',
-                  willChange: isDragging ? 'transform' : 'auto',
-                  transition: isDragging ? 'none' : 'transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
-                }}
-                draggable={false}
-              />
-              <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 whitespace-nowrap text-center text-white text-sm bg-black bg-opacity-75 py-2 px-4 rounded-lg pointer-events-none">
-                Drag to Move • Pinch to Zoom
-              </div>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+        <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            )}
+            <div>
+              <h2 className="text-2xl font-bold text-white">Virtual Try-On</h2>
+              <p className="text-purple-100 text-sm">See how {product?.name || 'it'} looks on you!</p>
             </div>
           </div>
-        )}
-
-        {(isLoading || !isProductImageLoaded) && !showErrorDialog && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20">
-            <div className="text-center bg-gray-900 bg-opacity-90 rounded-2xl p-8 max-w-md mx-4">
-              <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-white text-lg font-semibold">
-                {!isProductImageLoaded ? 'Loading Product...' : 'Setting Up Virtual Try-On...'}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {error && (
-          <ErrorDialog
-            isOpen={showErrorDialog}
-            title={error.title}
-            message={error.message}
-            onClose={handleClose}
-            onRetry={handleRetry}
-          />
-        )}
-
-        <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-30">
           <button
-            onClick={handleClose}
-            className="bg-black bg-opacity-50 backdrop-blur-sm text-white p-3 rounded-full hover:bg-opacity-70 transition-all duration-200 hover:scale-110"
+            onClick={onClose}
+            className="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
-
-          <div className="text-white bg-black bg-opacity-50 backdrop-blur-sm px-4 py-2 rounded-full">
-            <p className="font-medium text-sm">{product.name}</p>
-          </div>
-
-          {useLiveCamera && (
-            <button
-              onClick={flipCamera}
-              className="bg-black bg-opacity-50 backdrop-blur-sm text-white p-3 rounded-full hover:bg-opacity-70 transition-all duration-200 hover:scale-110 disabled:opacity-50"
-              disabled={isLoading}
-              title="Flip Camera"
-            >
-              <RotateCw className="w-6 h-6" />
-            </button>
-          )}
         </div>
 
-        <div className="absolute top-20 left-4 z-30 flex flex-col gap-2">
-          <button
-            onClick={toggleBackgroundMode}
-            className={`backdrop-blur-sm text-white p-3 rounded-full transition-all duration-200 hover:scale-110 ${
-              useLiveCamera ? 'bg-blue-500 bg-opacity-70' : 'bg-black bg-opacity-50'
-            }`}
-            title="Toggle Camera/Model"
-          >
-            <Video className="w-6 h-6" />
-          </button>
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Model Selection */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-gray-900">Choose Model</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {models.map((model) => (
+                  <button
+                    key={model.id}
+                    onClick={() => setSelectedModel(model)}
+                    className={`relative rounded-xl overflow-hidden border-2 transition-all ${
+                      selectedModel?.id === model.id
+                        ? 'border-purple-500 ring-2 ring-purple-200'
+                        : 'border-gray-200 hover:border-purple-300'
+                    }`}
+                  >
+                    <img
+                      src={model.image_url}
+                      alt={model.name}
+                      className="w-full h-32 object-cover"
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                      <p className="text-white text-xs font-medium">{model.name}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          {!useLiveCamera && models.length > 0 && (
-            <button
-              onClick={() => setShowModelSelector(!showModelSelector)}
-              className="bg-black bg-opacity-50 backdrop-blur-sm text-white p-3 rounded-full hover:bg-opacity-70 transition-all duration-200 hover:scale-110"
-              title="Select Model"
-            >
-              <ImageIcon className="w-6 h-6" />
-            </button>
-          )}
-        </div>
+            {/* Try-On Canvas */}
+            <div className="lg:col-span-2 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-gray-900">Try It On</h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setScale(Math.min(scale + 0.1, 3))}
+                    className="bg-purple-100 hover:bg-purple-200 text-purple-700 p-2 rounded-lg transition-colors"
+                    title="Zoom In"
+                  >
+                    <ZoomIn className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setScale(Math.max(scale - 0.1, 0.5))}
+                    className="bg-purple-100 hover:bg-purple-200 text-purple-700 p-2 rounded-lg transition-colors"
+                    title="Zoom Out"
+                  >
+                    <ZoomOut className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={handleReset}
+                    className="bg-purple-100 hover:bg-purple-200 text-purple-700 p-2 rounded-lg transition-colors"
+                    title="Reset"
+                  >
+                    <RotateCcw className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={handleDownload}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    <Download className="w-5 h-5" />
+                    <span>Save</span>
+                  </button>
+                </div>
+              </div>
 
-        {showModelSelector && !useLiveCamera && (
-          <div className="absolute top-36 left-4 z-30 bg-black bg-opacity-80 backdrop-blur-sm rounded-2xl p-4 max-w-xs">
-            <h3 className="text-white font-semibold mb-3 text-sm">Select Background</h3>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {models.map((model) => (
-                <button
-                  key={model.id}
-                  onClick={() => {
-                    setSelectedModel(model);
-                    setShowModelSelector(false);
-                  }}
-                  className={`w-full flex items-center gap-3 p-2 rounded-lg transition-all ${
-                    selectedModel?.id === model.id
-                      ? 'bg-blue-500 bg-opacity-50'
-                      : 'bg-white bg-opacity-10 hover:bg-opacity-20'
-                  }`}
-                >
+              <div
+                className="relative bg-gray-100 rounded-2xl overflow-hidden"
+                style={{ height: '500px' }}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+              >
+                {selectedModel && (
                   <img
-                    src={model.image_url}
-                    alt={model.name}
-                    className="w-12 h-12 object-cover rounded"
+                    src={selectedModel.image_url}
+                    alt={selectedModel.name}
+                    className="absolute inset-0 w-full h-full object-cover"
                   />
-                  <span className="text-white text-sm font-medium">{model.name}</span>
-                </button>
-              ))}
+                )}
+
+                {product && product.try_on_image_url && (
+                  <img
+                    ref={productImageRef}
+                    src={product.try_on_image_url}
+                    alt={product.name}
+                    crossOrigin="anonymous"
+                    className="absolute cursor-move"
+                    style={{
+                      transform: `translate(${position.x}px, ${position.y}px) rotate(${rotation}deg) scale(${scale})`,
+                      left: '50%',
+                      top: '50%',
+                      marginLeft: '-50px',
+                      marginTop: '-50px',
+                      width: '100px',
+                      height: 'auto',
+                      pointerEvents: isDragging ? 'none' : 'auto',
+                    }}
+                    onMouseDown={handleMouseDown}
+                    draggable={false}
+                  />
+                )}
+
+                <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-sm rounded-xl p-3">
+                  <p className="text-sm text-gray-600 text-center">
+                    Drag the product to position it. Use controls to zoom and rotate.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-        )}
-
-        {!isLoading && (useLiveCamera ? isCameraReady : true) && (
-          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-30">
-            <div className="bg-black bg-opacity-50 rounded-full px-6 py-3 flex gap-4 items-center backdrop-blur-sm shadow-2xl">
-              <button
-                onClick={() => smoothZoom(imageTransform.scale - 0.15)}
-                className="text-white p-2 hover:bg-white hover:bg-opacity-20 rounded-full transition-all duration-200 hover:scale-110 active:scale-95"
-                title="Zoom Out"
-              >
-                <ZoomOut className="w-5 h-5" />
-              </button>
-
-              <button
-                onClick={() => smoothZoom(imageTransform.scale + 0.15)}
-                className="text-white p-2 hover:bg-white hover:bg-opacity-20 rounded-full transition-all duration-200 hover:scale-110 active:scale-95"
-                title="Zoom In"
-              >
-                <ZoomIn className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="absolute bottom-4 left-4 z-30 bg-black bg-opacity-60 backdrop-blur-sm px-4 py-2 rounded-lg">
-          <p className="text-white text-sm font-semibold">
-            by{' '}
-            <a
-              href="https://www.tagyverse.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-blue-300 transition-colors duration-200"
-            >
-              tagyverse
-            </a>
-          </p>
         </div>
       </div>
     </div>

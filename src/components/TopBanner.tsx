@@ -1,42 +1,27 @@
-import { useState, useEffect } from 'react';
-import { db } from '../lib/firebase';
-import { ref, get } from 'firebase/database';
+import { usePublishedData } from '../contexts/PublishedDataContext';
 
 export default function TopBanner() {
-  const [bannerContent, setBannerContent] = useState({
+  const { data: publishedData } = usePublishedData();
+  
+  const defaultContent = {
     text: '🎉 Grand Opening Sale! Get 20% OFF on all items!',
     isVisible: true,
-    backgroundColor: '#f59e0b'
-  });
+    backgroundColor: '#f59e0b',
+    textColor: '#ffffff'
+  };
 
-  useEffect(() => {
-    async function loadBanner() {
-      try {
-        const [bannerSnapshot, visibilitySnapshot] = await Promise.all([
-          get(ref(db, 'site_content/top_banner')),
-          get(ref(db, 'default_sections_visibility/marquee'))
-        ]);
-
-        let content = bannerContent;
-        if (bannerSnapshot.exists()) {
-          const data = bannerSnapshot.val();
-          if (data.value) {
-            content = data.value;
-          }
-        }
-
-        if (visibilitySnapshot.exists()) {
-          content = { ...content, isVisible: visibilitySnapshot.val() && content.isVisible };
-        }
-
-        setBannerContent(content);
-      } catch (error) {
-        console.error('Error loading top banner:', error);
-      }
-    }
-
-    loadBanner();
-  }, []);
+  let bannerContent = defaultContent;
+  
+  if (publishedData?.site_content?.top_banner?.value) {
+    console.log('[TOP-BANNER] Using published data');
+    bannerContent = publishedData.site_content.top_banner.value;
+  } else {
+    console.log('[TOP-BANNER] Using default content');
+  }
+  
+  if (publishedData?.default_sections_visibility?.marquee !== undefined) {
+    bannerContent = { ...bannerContent, isVisible: publishedData.default_sections_visibility.marquee && bannerContent.isVisible };
+  }
 
   if (!bannerContent.isVisible) {
     return null;
@@ -44,8 +29,11 @@ export default function TopBanner() {
 
   return (
     <div
-      className="text-white py-2 overflow-hidden"
-      style={{ backgroundColor: bannerContent.backgroundColor }}
+      className="py-2 overflow-hidden"
+      style={{
+        backgroundColor: bannerContent.backgroundColor,
+        color: bannerContent.textColor || '#ffffff'
+      }}
     >
       <div className="animate-marquee whitespace-nowrap inline-block">
         <span className="text-sm font-semibold mx-8">{bannerContent.text}</span>

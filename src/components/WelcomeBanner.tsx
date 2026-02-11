@@ -1,7 +1,5 @@
-import { useState, useEffect } from 'react';
 import { Instagram, Mail, Facebook, Twitter, MessageCircle, Linkedin, Youtube, AtSign, Link as LinkIcon } from 'lucide-react';
-import { db } from '../lib/firebase';
-import { ref, get } from 'firebase/database';
+import { usePublishedData } from '../contexts/PublishedDataContext';
 
 interface SocialLink {
   id: string;
@@ -24,94 +22,79 @@ const PLATFORM_ICONS = {
 };
 
 export default function WelcomeBanner() {
-  const [bannerContent, setBannerContent] = useState({
+  const { data: publishedData } = usePublishedData();
+  
+  const defaultBannerContent = {
     title: 'Welcome to Pixie Blooms!',
     subtitle: 'Discover our exclusive collection of handcrafted hair accessories',
     isVisible: true
-  });
+  };
 
-  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
+  const bannerContent = publishedData?.site_content?.welcome_banner?.value || defaultBannerContent;
+  
+  if (publishedData?.site_content?.welcome_banner?.value) {
+    console.log('[WELCOME-BANNER] Using published banner data');
+  }
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const bannerRef = ref(db, 'site_content/welcome_banner');
-        const bannerSnapshot = await get(bannerRef);
-        if (bannerSnapshot.exists()) {
-          const data = bannerSnapshot.val();
-          if (data.value) {
-            setBannerContent(data.value);
-          }
-        }
-
-        const socialRef = ref(db, 'social_links');
-        const socialSnapshot = await get(socialRef);
-        if (socialSnapshot.exists()) {
-          const data = socialSnapshot.val();
-          const linksArray = Object.entries(data).map(([id, link]: [string, any]) => ({
-            id,
-            ...link
-          }));
-          setSocialLinks(linksArray.sort((a, b) => a.order - b.order));
-        } else {
-          setSocialLinks([
-            {
-              id: 'default_instagram',
-              platform: 'instagram',
-              url: 'https://www.instagram.com/pixieblooms',
-              icon: 'instagram',
-              order: 0
-            },
-            {
-              id: 'default_email',
-              platform: 'email',
-              url: 'mailto:pixieblooms2512@gmail.com',
-              icon: 'email',
-              order: 1
-            }
-          ]);
-        }
-      } catch (error) {
-        console.error('Error loading banner data:', error);
-      }
+  const defaultSocialLinks: SocialLink[] = [
+    {
+      id: 'default_instagram',
+      platform: 'instagram',
+      url: 'https://www.instagram.com/pixieblooms',
+      icon: 'instagram',
+      order: 0
+    },
+    {
+      id: 'default_email',
+      platform: 'email',
+      url: 'mailto:pixieblooms2512@gmail.com',
+      icon: 'email',
+      order: 1
     }
+  ];
 
-    loadData();
-  }, []);
+  let socialLinks: SocialLink[] = defaultSocialLinks;
+  if (publishedData?.social_links) {
+    console.log('[WELCOME-BANNER] Using published social links');
+    const linksArray = Object.entries(publishedData.social_links).map(([id, link]: [string, any]) => ({
+      id,
+      ...link
+    }));
+    socialLinks = linksArray.sort((a, b) => a.order - b.order);
+  } else {
+    console.log('[WELCOME-BANNER] Using default social links');
+  }
 
   if (!bannerContent.isVisible) {
     return null;
   }
 
+  // Determine if text color is light or dark for better contrast
+  const textColor = bannerContent.text_color || '#ffffff';
+  const bgColor = bannerContent.bg_color || '#06b6d4';
+
   return (
-    <div className="bg-gradient-to-r from-pink-50 via-purple-50 to-teal-50 border-b border-teal-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <p className="text-xs sm:text-sm text-gray-600 font-medium">
-            {bannerContent.title} - {bannerContent.subtitle}
-          </p>
-          {socialLinks.length > 0 && (
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-gray-500 hidden sm:inline">Follow Us:</span>
-              <div className="flex items-center gap-2">
-                {socialLinks.map((link) => {
-                  const Icon = PLATFORM_ICONS[link.icon as keyof typeof PLATFORM_ICONS] || LinkIcon;
-                  return (
-                    <a
-                      key={link.id}
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-7 h-7 rounded-full bg-white border border-teal-200 flex items-center justify-center hover:bg-teal-500 hover:text-white hover:border-teal-500 transition-all duration-300 group"
-                      aria-label={link.platform}
-                    >
-                      <Icon className="w-3.5 h-3.5 text-gray-600 group-hover:text-white" />
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+    <div className="py-6 px-4 text-center" style={{ backgroundColor: bgColor }}>
+      <div className="max-w-6xl mx-auto">
+        <h2 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: textColor }}>{bannerContent.title}</h2>
+        <p className="text-sm md:text-base mb-4" style={{ color: textColor, opacity: 0.95 }}>{bannerContent.subtitle}</p>
+        
+        <div className="flex justify-center items-center gap-4 mt-4">
+          {socialLinks.map((social) => {
+            const IconComponent = PLATFORM_ICONS[social.platform as keyof typeof PLATFORM_ICONS] || LinkIcon;
+            return (
+              <a
+                key={social.id}
+                href={social.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-white/20 hover:bg-white/30 p-3 rounded-full transition-all transform hover:scale-110"
+                aria-label={social.platform}
+              >
+                <IconComponent className="w-5 h-5" />
+              </a>
+            );
+          })}
         </div>
       </div>
     </div>

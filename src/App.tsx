@@ -1,7 +1,10 @@
-import { useState, useEffect, Component, ReactNode } from 'react';
+'use client';
+
+import { useState, useEffect, Component, ReactNode, lazy, Suspense } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { FavoritesProvider } from './contexts/FavoritesContext';
+import { PublishedDataProvider, usePublishedData } from './contexts/PublishedDataContext';
 import TopBanner from './components/TopBanner';
 import WelcomeBanner from './components/WelcomeBanner';
 import Navigation from './components/Navigation';
@@ -17,18 +20,26 @@ import SplashScreen from './components/SplashScreen';
 import Footer from './components/Footer';
 import Home from './pages/Home';
 import Shop from './pages/Shop';
-import Admin from './pages/Admin';
-import Checkout from './pages/Checkout';
-import SuperAdmin from './pages/SuperAdmin';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import ShippingPolicy from './pages/ShippingPolicy';
-import RefundPolicy from './pages/RefundPolicy';
-import Contact from './pages/Contact';
-import Maintenance from './pages/Maintenance';
+import ComingSoon from './pages/ComingSoon';
+// Lazy load heavy admin pages for better initial load performance
+const Admin = lazy(() => import('./pages/Admin'));
+const Checkout = lazy(() => import('./pages/Checkout'));
+const SuperAdmin = lazy(() => import('./pages/SuperAdmin'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const ShippingPolicy = lazy(() => import('./pages/ShippingPolicy'));
+const RefundPolicy = lazy(() => import('./pages/RefundPolicy'));
+const Contact = lazy(() => import('./pages/Contact'));
 import type { Product } from './types';
 import { db } from './lib/firebase';
 import { ref, get, onValue } from 'firebase/database';
 import { initAnalytics } from './utils/analytics';
+import { initPerformanceMonitoring } from './utils/performanceMonitoring';
+import { initFetchInterceptor } from './utils/fetchInterceptor';
+
+import PageLoader from './components/PageLoader';
+import { monitorWebVitals, enableGPUAcceleration, respectReducedMotion, preloadCriticalImages } from './utils/performanceOptimization';
+import { generateAISiteDescription, generateAIKeywords, generateOrganizationSchema, injectSchema } from './utils/seoOptimization';
+import { preloadCriticalImages as preloadImages } from './utils/imageOptimization';
 
 type Page = 'home' | 'shop' | 'admin' | 'checkout' | 'superadmin' | 'privacy-policy' | 'shipping-policy' | 'refund-policy' | 'contact';
 
@@ -87,6 +98,7 @@ function getInitialPage(): Page {
 }
 
 function AppContent() {
+  const { data: publishedData, loading: publishedDataLoading, error: publishedDataError } = usePublishedData();
   const [currentPage, setCurrentPage] = useState<Page>(getInitialPage());
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [cartModalOpen, setCartModalOpen] = useState(false);
@@ -96,30 +108,47 @@ function AppContent() {
   const [showSplash, setShowSplash] = useState(true);
   const [appReady, setAppReady] = useState(false);
   const [temporarilyClosed, setTemporarilyClosed] = useState(false);
-  const [maintenanceMode, setMaintenanceMode] = useState(true);
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(true);
 
   const hideNavigation = currentPage === 'admin' || currentPage === 'checkout' || currentPage === 'superadmin' || currentPage === 'privacy-policy' || currentPage === 'shipping-policy' || currentPage === 'refund-policy' || currentPage === 'contact';
   const isAdminPage = currentPage === 'admin' || currentPage === 'superadmin';
 
-  const checkAdminBypass = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('admin') === 'true';
-  };
-
   useEffect(() => {
+    // Performance optimizations
+    enableGPUAcceleration();
+    respectReducedMotion();
+    monitorWebVitals();
+    
+    // Initialize fetch interceptor to suppress validation warnings
+    initFetchInterceptor();
     // Initialize analytics tracking
     initAnalytics();
+    // Initialize performance monitoring
+    initPerformanceMonitoring();
+    
+    // SEO Initialization
+    try {
+      // Inject organization schema
+      injectSchema(generateOrganizationSchema());
+      
+      // Add AI-generated description to meta tags
+      const aiDescription = generateAISiteDescription();
+      const metaDescription = document.querySelector('meta[name="description"]');
+      if (metaDescription) {
+        metaDescription.setAttribute('content', aiDescription);
+      }
+      
+      // Update keywords with AI-generated ones
+      const metaKeywords = document.querySelector('meta[name="keywords"]');
+      if (metaKeywords) {
+        metaKeywords.setAttribute('content', generateAIKeywords().join(', '));
+      }
+    } catch (error) {
+      console.error('[SEO] Error initializing SEO:', error);
+    }
 
     const checkStoreStatus = async () => {
       try {
-        const maintenanceRef = ref(db, 'maintenance_settings');
-        const maintenanceSnapshot = await get(maintenanceRef);
-        if (maintenanceSnapshot.exists()) {
-          const maintenanceData = maintenanceSnapshot.val();
-          setMaintenanceMode(maintenanceData.is_enabled || false);
-        }
-
         const settingsRef = ref(db, 'site_settings');
         const snapshot = await get(settingsRef);
         if (snapshot.exists()) {
@@ -222,112 +251,156 @@ function AppContent() {
   }, []);
 
   const renderPage = () => {
+    const LoadingFallback = () => (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 to-mint-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading...</p>
+        </div>
+      </div>
+    );
+
     switch (currentPage) {
       case 'home':
         return <Home onNavigate={handleNavigate} onCartClick={() => setCartModalOpen(true)} />;
       case 'shop':
         return <Shop onCartClick={() => setCartModalOpen(true)} />;
       case 'admin':
-        return <Admin />;
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <Admin />
+          </Suspense>
+        );
       case 'superadmin':
-        return <SuperAdmin />;
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <SuperAdmin />
+          </Suspense>
+        );
       case 'checkout':
-        return <Checkout onBack={() => handleNavigate('shop')} onLoginClick={() => setLoginModalOpen(true)} />;
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <Checkout onBack={() => handleNavigate('shop')} onLoginClick={() => setLoginModalOpen(true)} />
+          </Suspense>
+        );
       case 'privacy-policy':
-        return <PrivacyPolicy onBack={() => handleNavigate('home')} />;
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <PrivacyPolicy onBack={() => handleNavigate('home')} />
+          </Suspense>
+        );
       case 'shipping-policy':
-        return <ShippingPolicy onBack={() => handleNavigate('home')} />;
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <ShippingPolicy onBack={() => handleNavigate('home')} />
+          </Suspense>
+        );
       case 'refund-policy':
-        return <RefundPolicy onBack={() => handleNavigate('home')} />;
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <RefundPolicy onBack={() => handleNavigate('home')} />
+          </Suspense>
+        );
       case 'contact':
-        return <Contact onBack={() => handleNavigate('home')} />;
+        return (
+          <Suspense fallback={<LoadingFallback />}>
+            <Contact onBack={() => handleNavigate('home')} />
+          </Suspense>
+        );
       default:
         return <Home onNavigate={handleNavigate} onCartClick={() => setCartModalOpen(true)} />;
     }
   };
 
-  if (maintenanceMode && !checkAdminBypass() && appReady) {
-    return <Maintenance isAdminRoute={currentPage === 'admin'} />;
-  }
-
   return (
     <>
-      {showSplash && <SplashScreen onComplete={() => {
-        setShowSplash(false);
-        setAppReady(true);
-      }} />}
+      {showSplash && (
+        <SplashScreen onComplete={() => {
+          setShowSplash(false);
+          setAppReady(true);
+        }} />
+      )}
 
-      <div className={`min-h-screen bg-white transition-opacity duration-500 ${appReady ? 'opacity-100' : 'opacity-0'}`}>
-        <div className={`${temporarilyClosed && !hideNavigation ? 'grayscale pointer-events-none' : ''}`}>
-          {!hideNavigation && (
-            <>
-              <TopBanner />
-              {showWelcomeBanner && <WelcomeBanner />}
-              <Navigation
-                currentPage={currentPage}
-                onNavigate={handleNavigate}
-                onLoginClick={() => setLoginModalOpen(true)}
-                onCartClick={() => setCartModalOpen(true)}
-                onOrdersClick={() => setOrdersSheetOpen(true)}
-                onProductClick={handleProductClick}
-              />
-            </>
-          )}
+      {/* Show Coming Soon if no published data and not on admin pages */}
+      {appReady && publishedDataError && !isAdminPage && (
+        <ComingSoon />
+      )}
 
-          {renderPage()}
+      {/* Show normal app if data exists or on admin pages */}
+      {((!publishedDataError && appReady) || isAdminPage) && (
+        <div className={`min-h-screen bg-white transition-opacity duration-500 ${appReady ? 'opacity-100' : 'opacity-0'}`}>
+          <div className={`${temporarilyClosed && !hideNavigation ? 'grayscale pointer-events-none' : ''}`}>
+            {!hideNavigation && (
+              <>
+                <TopBanner />
+                {showWelcomeBanner && <WelcomeBanner />}
+                <Navigation
+                  currentPage={currentPage}
+                  onNavigate={handleNavigate}
+                  onLoginClick={() => setLoginModalOpen(true)}
+                  onCartClick={() => setCartModalOpen(true)}
+                  onOrdersClick={() => setOrdersSheetOpen(true)}
+                  onProductClick={handleProductClick}
+                />
+              </>
+            )}
 
-          <PurchaseNotification />
-          <OfferDialog />
-          <WelcomeCouponDialog />
-          <FeedbackPanel />
+            {renderPage()}
 
-          <LoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
-          <CartModal
-            isOpen={cartModalOpen}
-            onClose={() => setCartModalOpen(false)}
-            onCheckout={() => handleNavigate('checkout')}
-          />
-          <MyOrdersSheet
-            isOpen={ordersSheetOpen}
-            onClose={() => setOrdersSheetOpen(false)}
-            onLoginClick={() => {
-              setOrdersSheetOpen(false);
-              setLoginModalOpen(true);
-            }}
-          />
-          <ProductDetailsSheet
-            product={selectedProduct}
-            isOpen={showProductDetails}
-            onClose={() => {
-              setShowProductDetails(false);
-              setSelectedProduct(null);
-              const urlParams = new URLSearchParams(window.location.search);
-              if (urlParams.has('product')) {
-                const currentPath = window.location.pathname;
-                window.history.pushState({}, '', currentPath);
-              }
-            }}
-          />
+            <PurchaseNotification />
+            <OfferDialog />
+            <WelcomeCouponDialog />
+            <FeedbackPanel />
 
-          {!hideNavigation && <Footer onNavigate={handleNavigate} />}
-        </div>
+            {!hideNavigation && <Footer onNavigate={handleNavigate} />}
+          </div>
 
-        {temporarilyClosed && !hideNavigation && (
-          <div className="fixed top-32 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
-            <div className="bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl shadow-2xl p-6 border-4 border-white max-w-2xl w-full pointer-events-auto animate-pulse">
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-3 mb-3">
-                  <span className="text-3xl">🔒</span>
-                  <h2 className="text-2xl font-bold text-white">Temporarily Closed</h2>
+          {temporarilyClosed && !hideNavigation && (
+            <div className="fixed top-32 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
+              <div className="bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl shadow-2xl p-6 border-4 border-white max-w-2xl w-full pointer-events-auto animate-pulse">
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-3 mb-3">
+                    <span className="text-3xl">🔒</span>
+                    <h2 className="text-2xl font-bold text-white">Temporarily Closed</h2>
+                  </div>
+                  <p className="text-white text-base font-medium">
+                    We're currently closed. Please check back later. Thank you for your patience.
+                  </p>
                 </div>
-                <p className="text-white text-base font-medium">
-                  We're currently closed. Please check back later. Thank you for your patience.
-                </p>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
+
+      {/* Modals rendered outside the grayscale container to fix position: fixed */}
+      <LoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
+      <CartModal
+        isOpen={cartModalOpen}
+        onClose={() => setCartModalOpen(false)}
+        onCheckout={() => handleNavigate('checkout')}
+      />
+      <MyOrdersSheet
+        isOpen={ordersSheetOpen}
+        onClose={() => setOrdersSheetOpen(false)}
+        onLoginClick={() => {
+          setOrdersSheetOpen(false);
+          setLoginModalOpen(true);
+        }}
+      />
+      <ProductDetailsSheet
+        product={selectedProduct}
+        isOpen={showProductDetails}
+        onClose={() => {
+          setShowProductDetails(false);
+          setSelectedProduct(null);
+          const urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.has('product')) {
+            const currentPath = window.location.pathname;
+            window.history.pushState({}, '', currentPath);
+          }
+        }}
+      />
     </>
   );
 }
@@ -336,11 +409,13 @@ function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <CartProvider>
-          <FavoritesProvider>
-            <AppContent />
-          </FavoritesProvider>
-        </CartProvider>
+        <PublishedDataProvider>
+          <CartProvider>
+            <FavoritesProvider>
+              <AppContent />
+            </FavoritesProvider>
+          </CartProvider>
+        </PublishedDataProvider>
       </AuthProvider>
     </ErrorBoundary>
   );

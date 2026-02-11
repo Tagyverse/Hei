@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Upload, Sparkles, CheckCircle, AlertCircle, Loader, Camera, Image as ImageIcon } from 'lucide-react';
-import { db } from '../lib/firebase';
-import { ref, get } from 'firebase/database';
+import { usePublishedData } from '../contexts/PublishedDataContext';
+import { objectToArray } from '../utils/publishedData';
 import type { Product } from '../types';
 import LazyImage from './LazyImage';
 
@@ -70,6 +70,7 @@ const getColorName = (hex: string): string => {
 };
 
 export default function DressColorMatcher({ isOpen, onClose, currentProduct }: DressColorMatcherProps) {
+  const { data: publishedData } = usePublishedData();
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [detectedColors, setDetectedColors] = useState<ColorInfo[]>([]);
   const [matchedProducts, setMatchedProducts] = useState<MatchedProduct[]>([]);
@@ -204,18 +205,10 @@ export default function DressColorMatcher({ isOpen, onClose, currentProduct }: D
   };
 
   const matchProductsByColors = async (colors: ColorInfo[]) => {
+    if (!publishedData?.products) return;
+
     try {
-      const productsRef = ref(db, 'products');
-      const snapshot = await get(productsRef);
-
-      if (!snapshot.exists()) return;
-
-      const data = snapshot.val();
-      const allProducts = Object.entries(data)
-        .map(([id, prod]: [string, any]) => ({
-          id,
-          ...prod,
-        }))
+      const allProducts = objectToArray<Product>(publishedData.products)
         .filter((p: Product) => {
           if (!p.in_stock || p.isVisible === false || !p.availableColors || p.availableColors.length === 0) {
             return false;

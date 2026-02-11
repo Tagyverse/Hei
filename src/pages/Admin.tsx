@@ -1,5 +1,9 @@
+'use client';
+
+import React from "react"
+
 import { useEffect, useState } from 'react';
-import { Plus, CreditCard as Edit2, Trash2, Save, X, FolderOpen, Video, Star, CheckCircle, XCircle, MessageSquare, Megaphone, Settings, ShoppingBag, Package, Truck, FileText, Image, Printer, Type, Eye, EyeOff, Heart, Layers, Palette, Share2, Tag, Users, Receipt, Footprints, Brain, BarChart3, Wrench } from 'lucide-react';
+import { Plus, CreditCard as Edit2, Trash2, Save, X, FolderOpen, Video, Star, CheckCircle, XCircle, MessageSquare, Megaphone, Settings, ShoppingBag, Package, Truck, FileText, ImageIcon, Printer, Type, Eye, EyeOff, Heart, Layers, Palette, Share2, Tag, Users, Receipt, Footprints, Brain, BarChart3, Wrench, Upload, Loader2 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { ref, get, set, update, remove, push } from 'firebase/database';
 import { useAuth } from '../contexts/AuthContext';
@@ -22,13 +26,19 @@ import ColorPicker from '../components/admin/ColorPicker';
 import StatisticsCharts from '../components/admin/StatisticsCharts';
 import AIAgentManager from '../components/admin/AIAgentManager';
 import TrafficAnalytics from '../components/admin/TrafficAnalytics';
-import MaintenanceManager from '../components/admin/MaintenanceManager';
 import UpgradeBanner from '../components/admin/UpgradeBanner';
 import R2GalleryManager from '../components/admin/R2GalleryManager';
+import BillCustomizer from '../components/admin/BillCustomizer';
+import PreviewModal from '../components/admin/PreviewModal';
 import ImageUpload from '../components/ImageUpload';
 import MultipleImageUpload from '../components/MultipleImageUpload';
 import LazyImage from '../components/LazyImage';
 import { downloadBillAsPDF, downloadBillAsJPG, printBill } from '../utils/billGenerator';
+import DataValidationPanel from '../components/admin/DataValidationPanel';
+import { validateFirebaseData, type ValidationResult } from '../utils/dataValidator';
+import PublishHistoryPanel from '../components/admin/PublishHistoryPanel';
+import PublishManager from '../components/admin/PublishManager';
+import { addPublishRecord } from '../utils/publishHistory';
 
 interface Order {
   id: string;
@@ -85,7 +95,13 @@ export default function Admin() {
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showOfferForm, setShowOfferForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'offers' | 'orders' | 'carousel' | 'marquee' | 'sections' | 'card-design' | 'banner-social' | 'navigation' | 'coupons' | 'bulk-operations' | 'try-on' | 'tax' | 'footer' | 'ai-assistant' | 'traffic' | 'gallery' | 'settings'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'offers' | 'orders' | 'carousel' | 'marquee' | 'sections' | 'card-design' | 'banner-social' | 'navigation' | 'coupons' | 'bulk-operations' | 'try-on' | 'tax' | 'footer' | 'ai-assistant' | 'traffic' | 'gallery' | 'bill-customizer' | 'settings' | 'publish'>('products');
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [lastPublished, setLastPublished] = useState<string | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [validation, setValidation] = useState<ValidationResult | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
+  const [historyRefresh, setHistoryRefresh] = useState(0);
 
   const [productSearch, setProductSearch] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
@@ -158,13 +174,29 @@ export default function Admin() {
     dispatch_details: ''
   });
 
+  const [billSettings, setBillSettings] = useState<any>(null);
+
   useEffect(() => {
     const savedAuth = localStorage.getItem('adminAuthenticated');
     if (savedAuth === 'true') {
       setIsAdminAuthenticated(true);
     }
     fetchData();
+    fetchBillSettings();
   }, []);
+
+  const fetchBillSettings = async () => {
+    try {
+      const billSettingsRef = ref(db, 'bill_settings');
+      const snapshot = await get(billSettingsRef);
+      if (snapshot.exists()) {
+        setBillSettings(snapshot.val());
+      }
+    } catch (error: any) {
+      // Silently fail - bill settings are optional
+      console.warn('Bill settings not available:', error.message);
+    }
+  };
 
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -868,6 +900,242 @@ export default function Admin() {
     return matchesSearch && matchesStatus;
   });
 
+  const validateCurrentData = async () => {
+    setIsValidating(true);
+    try {
+      console.log('[ADMIN] Validating current data...');
+      
+      // Collect current data from state
+      const dataToValidate = {
+        products: products.reduce((acc, p) => {
+          acc[p.id] = p;
+          return acc;
+        }, {} as Record<string, any>),
+        categories: categories.reduce((acc, c) => {
+          acc[c.id] = c;
+          return acc;
+        }, {} as Record<string, any>),
+        reviews: reviews.reduce((acc, r) => {
+          acc[r.id] = r;
+          return acc;
+        }, {} as Record<string, any>),
+        offers: offers.reduce((acc, o) => {
+          acc[o.id] = o;
+          return acc;
+        }, {} as Record<string, any>),
+      };
+
+      const validationResult = validateFirebaseData(dataToValidate);
+      setValidation(validationResult);
+      
+      console.log('[ADMIN] Validation complete:', validationResult);
+      return validationResult;
+    } catch (error) {
+      console.error('[ADMIN] Validation error:', error);
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!confirm('Are you sure you want to publish all data to the live site? Users will see this data.')) {
+      return;
+    }
+
+    setIsPublishing(true);
+    try {
+      console.log('[ADMIN] Starting publish process...');
+      
+      // Fetch all Firebase data
+      const dataRefs = {
+        products: ref(db, 'products'),
+        categories: ref(db, 'categories'),
+        reviews: ref(db, 'reviews'),
+        offers: ref(db, 'offers'),
+        site_settings: ref(db, 'site_settings'),
+        carousel_images: ref(db, 'carousel_images'),
+        carousel_settings: ref(db, 'carousel_settings'),
+        homepage_sections: ref(db, 'homepage_sections'),
+        info_sections: ref(db, 'info_sections'),
+        marquee_sections: ref(db, 'marquee_sections'),
+        video_sections: ref(db, 'video_sections'),
+        video_section_settings: ref(db, 'video_section_settings'),
+        video_overlay_sections: ref(db, 'video_overlay_sections'),
+        video_overlay_items: ref(db, 'video_overlay_items'),
+        default_sections_visibility: ref(db, 'default_sections_visibility'),
+        card_designs: ref(db, 'card_designs'),
+        navigation_settings: ref(db, 'navigation_settings'),
+        coupons: ref(db, 'coupons'),
+        try_on_models: ref(db, 'try_on_models'),
+        tax_settings: ref(db, 'tax_settings'),
+        footer_settings: ref(db, 'footer_settings'),
+        footer_config: ref(db, 'footer_config'),
+        policies: ref(db, 'policies'),
+        settings: ref(db, 'settings'),
+        bill_settings: ref(db, 'bill_settings'),
+        // Banner and Social data
+        social_links: ref(db, 'social_links'),
+        site_content: ref(db, 'site_content'),
+        // Navigation customization
+        navigation_settings: ref(db, 'navigation_settings'),
+      };
+
+      console.log('[ADMIN] Fetching Firebase data...');
+      const snapshots = await Promise.all(
+        Object.entries(dataRefs).map(async ([key, refPath]) => {
+          try {
+            const snapshot = await get(refPath);
+            const hasData = snapshot.exists();
+            console.log(`[ADMIN] Fetched ${key}: ${hasData ? 'data exists' : 'no data'}`);
+            return [key, hasData ? snapshot.val() : null];
+          } catch (err) {
+            console.warn(`[ADMIN] Failed to fetch ${key}:`, err);
+            return [key, null];
+          }
+        })
+      );
+
+      const allData: Record<string, any> = {};
+      let dataCount = 0;
+      let productCount = 0;
+      let categoryCount = 0;
+      
+      const dataWithContent: string[] = [];
+      
+      snapshots.forEach(([key, value]) => {
+        allData[key as string] = value;
+        if (value) {
+          dataCount++;
+          dataWithContent.push(key as string);
+          if (key === 'products' && typeof value === 'object') {
+            productCount = Object.keys(value).length;
+          }
+          if (key === 'categories' && typeof value === 'object') {
+            categoryCount = Object.keys(value).length;
+          }
+        }
+      });
+
+      console.log(`[ADMIN] Data collected: ${dataCount} sections with ${productCount} products and ${categoryCount} categories`);
+      console.log('[ADMIN] Sections with data:', dataWithContent.sort());
+      console.log('[ADMIN] ✓ site_content:', dataWithContent.includes('site_content') ? 'YES' : 'NO');
+      console.log('[ADMIN] ✓ social_links:', dataWithContent.includes('social_links') ? 'YES' : 'NO');
+      console.log('[ADMIN] ✓ marquee_sections:', dataWithContent.includes('marquee_sections') ? 'YES' : 'NO');
+      console.log('[ADMIN] ✓ navigation_settings:', dataWithContent.includes('navigation_settings') ? 'YES' : 'NO');
+
+      // Note: Don't block publish - let all data through, even if some sections are empty
+      // This allows publishing navigation, banners, footer, etc. without products
+      if (dataWithContent.length === 0) {
+        throw new Error('No data found to publish. Please add some content first.');
+      }
+
+      console.log('[ADMIN] Sending to R2...');
+      
+      // Upload to R2
+      const response = await fetch('/api/publish-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ data: allData }),
+      });
+
+      // Try to parse JSON response
+      let result;
+      const responseText = await response.text();
+      try {
+        result = JSON.parse(responseText);
+      } catch {
+        // If response isn't JSON, create error object
+        result = { error: responseText || 'Unknown error occurred' };
+      }
+
+      if (!response.ok) {
+        const errorMsg = result.error || 'Failed to publish';
+        const details = result.details ? '\n' + result.details.join('\n') : '';
+        
+        if (errorMsg.includes('R2_BUCKET') || errorMsg.includes('R2 bucket')) {
+          throw new Error('R2 storage is not configured. Please add R2 bucket binding in Cloudflare Dashboard → Pages → Settings → Functions → R2 bucket bindings.');
+        }
+        
+        if (errorMsg.includes('validation')) {
+          throw new Error(`Data validation failed:${details}`);
+        }
+        
+        throw new Error(errorMsg);
+      }
+
+      console.log('[ADMIN] Publish successful!');
+      console.log('[ADMIN] Response:', result);
+      
+      setLastPublished(result.published_at);
+      
+      // Log successful publish to history
+      addPublishRecord({
+        timestamp: new Date().toISOString(),
+        status: 'success',
+        message: 'Data published successfully',
+        dataStats: {
+          productCount: result.productCount || productCount,
+          categoryCount: result.categoryCount || categoryCount,
+          totalSize: result.size || 0,
+        },
+        uploadTime: result.uploadTime,
+        verifyTime: result.verifyTime,
+      });
+      
+      // Refresh history panel
+      setHistoryRefresh(prev => prev + 1);
+      
+      let successMsg = `Data published successfully!
+Products: ${result.productCount || productCount}
+Categories: ${result.categoryCount || categoryCount}
+Size: ${result.size ? (result.size / 1024).toFixed(2) + ' KB' : 'unknown'}
+Upload Time: ${result.uploadTime || '?'}ms
+Verify Time: ${result.verifyTime || '?'}ms
+Users will now see the updated content.`;
+
+      if (result.warnings && result.warnings.length > 0) {
+        successMsg += `\n\nWarnings:\n${result.warnings.join('\n')}`;
+      }
+      
+      alert(successMsg);
+      
+      // Clear the published data cache so users get fresh data
+      const { clearPublishedDataCache } = await import('../utils/publishedData');
+      clearPublishedDataCache();
+      
+    } catch (error: any) {
+      console.error('[ADMIN] Error publishing data:', error);
+      const errorMessage = error?.message || String(error) || 'Unknown error';
+      
+      // Log failed publish to history
+      addPublishRecord({
+        timestamp: new Date().toISOString(),
+        status: 'failed',
+        message: 'Failed to publish data',
+        errorMessage: errorMessage,
+      });
+      
+      // Refresh history panel
+      setHistoryRefresh(prev => prev + 1);
+      
+      if (errorMessage.includes('Permission denied')) {
+        alert('Firebase permission denied. Please make sure you are logged in and have admin access.');
+      } else if (errorMessage.includes('R2')) {
+        alert(errorMessage);
+      } else if (errorMessage.includes('Failed to fetch')) {
+        alert('Network error. Please check your internet connection and try again.');
+      } else if (errorMessage.includes('No products') || errorMessage.includes('No categories')) {
+        alert(errorMessage);
+      } else {
+        alert(`Failed to publish data: ${errorMessage}`);
+      }
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   if (!isAdminAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-teal-50 to-mint-50 flex items-center justify-center p-4">
@@ -936,18 +1204,75 @@ export default function Admin() {
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-mint-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
         <div className="bg-white rounded-3xl shadow-xl p-4 sm:p-6 lg:p-8 mb-8">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">Admin Panel</h1>
               <p className="text-sm sm:text-base text-gray-600">Manage your products and categories</p>
             </div>
-            <button
-              onClick={handleAdminLogout}
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"
-            >
-              <X className="w-4 h-4" />
-              Logout
-            </button>
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                onClick={() => setShowPreviewModal(true)}
+                className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-5 py-2.5 rounded-xl font-semibold transition-all flex items-center gap-2 shadow-lg hover:shadow-xl"
+              >
+                <Eye className="w-5 h-5" />
+                Preview Changes
+              </button>
+              <button
+                onClick={handlePublish}
+                disabled={isPublishing}
+                className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-5 py-2.5 rounded-xl font-semibold transition-all flex items-center gap-2 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isPublishing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Publishing...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-5 h-5" />
+                    Publish to Live
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleAdminLogout}
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2.5 rounded-xl font-semibold transition-colors flex items-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                Logout
+              </button>
+            </div>
+          </div>
+
+          {lastPublished && (
+            <div className="mb-4 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700">
+              Last published: {new Date(lastPublished).toLocaleString()}
+            </div>
+          )}
+
+          <div className="mb-6 space-y-4">
+            <div>
+              <button
+                onClick={validateCurrentData}
+                disabled={isValidating}
+                className="mb-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isValidating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Validating...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    Validate Data
+                  </>
+                )}
+              </button>
+              <DataValidationPanel validation={validation} isValidating={isValidating} />
+            </div>
+
+            <PublishHistoryPanel refreshTrigger={historyRefresh} />
           </div>
 
           <UpgradeBanner />
@@ -1041,7 +1366,7 @@ export default function Admin() {
               }`}
             >
               <div className="flex items-center gap-2">
-                <Image className="w-4 h-4 sm:w-5 sm:h-5" />
+                <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                 Carousel
               </div>
             </button>
@@ -1288,8 +1613,27 @@ export default function Admin() {
               }`}
             >
               <div className="flex items-center gap-2">
-                <Image className="w-4 h-4 sm:w-5 sm:h-5" />
+                <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                 R2 Gallery
+              </div>
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('bill-customizer');
+                setShowForm(false);
+                setShowCategoryForm(false);
+                setShowReviewForm(false);
+                setShowOfferForm(false);
+              }}
+              className={`pb-4 px-4 sm:px-6 font-bold transition-colors whitespace-nowrap text-sm sm:text-base ${
+                activeTab === 'bill-customizer'
+                  ? 'border-b-4 border-orange-500 text-orange-600'
+                  : 'text-gray-600 hover:text-orange-600'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Receipt className="w-4 h-4 sm:w-5 sm:h-5" />
+                Bill Design
               </div>
             </button>
             <button
@@ -1313,21 +1657,21 @@ export default function Admin() {
             </button>
             <button
               onClick={() => {
-                setActiveTab('maintenance');
+                setActiveTab('publish');
                 setShowForm(false);
                 setShowCategoryForm(false);
                 setShowReviewForm(false);
                 setShowOfferForm(false);
               }}
               className={`pb-4 px-4 sm:px-6 font-bold transition-colors whitespace-nowrap text-sm sm:text-base ${
-                activeTab === 'maintenance'
-                  ? 'border-b-4 border-orange-500 text-orange-600'
-                  : 'text-gray-600 hover:text-orange-600'
+                activeTab === 'publish'
+                  ? 'border-b-4 border-green-500 text-green-600'
+                  : 'text-gray-600 hover:text-green-600'
               }`}
             >
               <div className="flex items-center gap-2">
-                <Wrench className="w-4 h-4 sm:w-5 sm:h-5" />
-                Maintenance
+                <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
+                Publish to Live
               </div>
             </button>
           </div>
@@ -1394,7 +1738,7 @@ export default function Admin() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Price (₹)</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Price (���)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -2557,7 +2901,7 @@ export default function Admin() {
                                 contact_email: settingsFormData.contact_email || 'contact@hairstore.com',
                                 contact_phone: settingsFormData.contact_phone || '+919345259073'
                               };
-                              downloadBillAsPDF(order, siteSettings, shippingPrice);
+                              downloadBillAsPDF(order, siteSettings, shippingPrice, billSettings);
                             }}
                             className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg border-2 border-red-700"
                           >
@@ -2571,11 +2915,11 @@ export default function Admin() {
                                 contact_email: settingsFormData.contact_email || 'contact@hairstore.com',
                                 contact_phone: settingsFormData.contact_phone || '+919345259073'
                               };
-                              downloadBillAsJPG(order, siteSettings, shippingPrice);
+                              downloadBillAsJPG(order, siteSettings, shippingPrice, billSettings);
                             }}
                             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg border-2 border-blue-700"
                           >
-                            <Image className="w-5 h-5" />
+                            <ImageIcon className="w-5 h-5" />
                             JPG
                           </button>
                           <button
@@ -2585,7 +2929,7 @@ export default function Admin() {
                                 contact_email: settingsFormData.contact_email || 'contact@hairstore.com',
                                 contact_phone: settingsFormData.contact_phone || '+919345259073'
                               };
-                              printBill(order, siteSettings, shippingPrice);
+                              printBill(order, siteSettings, shippingPrice, billSettings);
                             }}
                             className="flex-1 bg-gray-700 hover:bg-gray-800 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg border-2 border-gray-800"
                           >
@@ -2616,7 +2960,7 @@ export default function Admin() {
               <div className="bg-gradient-to-r from-teal-500 to-teal-600 rounded-2xl p-6 sm:p-8 text-white">
                 <div className="flex items-center gap-4 mb-3">
                   <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                    <Image className="w-6 h-6" />
+                    <ImageIcon className="w-6 h-6" />
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold">Carousel Images</h2>
@@ -2821,6 +3165,12 @@ export default function Admin() {
             </div>
           )}
 
+          {activeTab === 'bill-customizer' && (
+            <div className="space-y-6">
+              <BillCustomizer />
+            </div>
+          )}
+
           {activeTab === 'settings' && (
             <div className="space-y-6">
               <div className="bg-gradient-to-r from-teal-500 to-teal-600 rounded-2xl p-6 sm:p-8 text-white">
@@ -2934,13 +3284,23 @@ export default function Admin() {
             </div>
           )}
 
-          {activeTab === 'maintenance' && (
+          {activeTab === 'publish' && (
             <div className="space-y-6">
-              <MaintenanceManager />
+              <PublishManager onPublishComplete={() => {
+                setHistoryRefresh(prev => prev + 1);
+              }} />
+              
+              <div className="bg-white rounded-2xl p-6 border-2 border-gray-200">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Publication History</h3>
+                <PublishHistoryPanel refreshTrigger={historyRefresh} />
+              </div>
             </div>
           )}
         </div>
       </div>
+      
+      {/* Preview Modal */}
+      <PreviewModal isOpen={showPreviewModal} onClose={() => setShowPreviewModal(false)} />
     </div>
   );
 }

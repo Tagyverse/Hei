@@ -1,6 +1,10 @@
+'use client';
+
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Package, CheckCircle, Clock, Truck, Loader } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useModalScroll } from '../hooks/useModalScroll';
 import { db } from '../lib/firebase';
 import { ref, get } from 'firebase/database';
 
@@ -46,6 +50,8 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  useModalScroll(isOpen);
 
   useEffect(() => {
     if (isOpen && user) {
@@ -125,10 +131,10 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
   if (!isOpen) return null;
 
   if (!user) {
-    return (
+    const notLoggedInContent = (
       <>
-        <div className="fixed inset-0 bg-black/40 z-50 transition-opacity" onClick={onClose}></div>
-        <div className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl max-h-[90vh] flex flex-col animate-slide-up">
+        <div className="fixed inset-0 bg-black/40 z-[9998] transition-opacity" onClick={onClose}></div>
+        <div className="fixed inset-x-0 bottom-0 z-[9999] bg-white rounded-t-3xl h-[90dvh] sm:h-auto flex flex-col animate-slide-up">
           <div className="p-6 text-center">
             <div className="flex justify-end mb-4">
               <button
@@ -156,12 +162,13 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
         </div>
       </>
     );
+    return createPortal(notLoggedInContent, document.body);
   }
 
-  return (
+  const modalContent = (
     <>
-      <div className="fixed inset-0 bg-black/40 z-50 transition-opacity" onClick={onClose}></div>
-      <div className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl max-h-[90vh] flex flex-col animate-slide-up">
+      <div className="fixed inset-0 bg-black/40 z-[9998] transition-opacity" onClick={onClose}></div>
+      <div className="fixed inset-x-0 bottom-0 z-[9999] bg-white rounded-t-3xl h-[90dvh] sm:h-auto flex flex-col animate-slide-up">
         <div className="p-6 pb-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -182,7 +189,7 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
+        <div className="flex-1 overflow-y-auto px-6 pb-6" style={{ overscrollBehavior: 'contain' }}>
           {loading ? (
             <div className="text-center py-12">
               <Loader className="w-8 h-8 animate-spin text-teal-600 mx-auto mb-3" />
@@ -208,14 +215,14 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
                 onClick={() => setSelectedOrder(null)}
                 className="text-teal-600 font-semibold text-sm hover:text-teal-700 mb-2"
               >
-                ← Back to Orders
+                {'← Back to Orders'}
               </button>
 
               <div className="bg-gradient-to-br from-teal-50 to-mint-50 rounded-2xl p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <p className="text-sm text-gray-600 font-semibold">Order ID</p>
-                    <p className="text-lg font-bold text-gray-900">#{selectedOrder.id.slice(0, 8).toUpperCase()}</p>
+                    <p className="text-lg font-bold text-gray-900">{'#'}{selectedOrder.id.slice(0, 8).toUpperCase()}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     {getStatusIcon(selectedOrder.order_status)}
@@ -259,9 +266,9 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
                             </div>
                           )}
                         </div>
-                        <p className="font-bold text-teal-600 ml-2">₹{Number(item.subtotal).toFixed(2)}</p>
+                        <p className="font-bold text-teal-600 ml-2">{'₹'}{Number(item.subtotal).toFixed(2)}</p>
                       </div>
-                      <p className="text-xs text-gray-600">Qty: {item.quantity} × ₹{Number(item.product_price).toFixed(2)}</p>
+                      <p className="text-xs text-gray-600">Qty: {item.quantity} {'× ₹'}{Number(item.product_price).toFixed(2)}</p>
                     </div>
                   ))}
                 </div>
@@ -289,7 +296,7 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
               <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl p-4 text-white">
                 <div className="flex justify-between items-center">
                   <p className="font-semibold">Total Amount</p>
-                  <p className="text-2xl font-bold">₹{Number(selectedOrder.total_amount).toFixed(2)}</p>
+                  <p className="text-2xl font-bold">{'₹'}{Number(selectedOrder.total_amount).toFixed(2)}</p>
                 </div>
               </div>
             </div>
@@ -303,7 +310,7 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <p className="font-bold text-gray-900 text-sm">#{order.id.slice(0, 8).toUpperCase()}</p>
+                      <p className="font-bold text-gray-900 text-sm">{'#'}{order.id.slice(0, 8).toUpperCase()}</p>
                       <div className="flex items-center gap-1.5">
                         {getStatusIcon(order.order_status)}
                         <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${getStatusColor(order.order_status)}`}>
@@ -311,7 +318,7 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
                         </span>
                       </div>
                     </div>
-                    <p className="text-lg font-bold text-teal-600">₹{Number(order.total_amount).toFixed(2)}</p>
+                    <p className="text-lg font-bold text-teal-600">{'₹'}{Number(order.total_amount).toFixed(2)}</p>
                   </div>
                   <div className="flex items-center justify-between text-xs text-gray-600">
                     <p>{order.order_items.length} {order.order_items.length === 1 ? 'item' : 'items'}</p>
@@ -329,20 +336,8 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
           )}
         </div>
       </div>
-
-      <style>{`
-        @keyframes slide-up {
-          from {
-            transform: translateY(100%);
-          }
-          to {
-            transform: translateY(0);
-          }
-        }
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
-        }
-      `}</style>
     </>
   );
+
+  return createPortal(modalContent, document.body);
 }

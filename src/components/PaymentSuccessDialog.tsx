@@ -1,4 +1,8 @@
-import { X, CheckCircle, Download } from 'lucide-react';
+'use client';
+
+import { createPortal } from 'react-dom';
+import { X, CheckCircle } from 'lucide-react';
+import { useModalScroll } from '../hooks/useModalScroll';
 
 interface PaymentSuccessDialogProps {
   isOpen: boolean;
@@ -16,15 +20,15 @@ export default function PaymentSuccessDialog({
   onClose,
   orderDetails
 }: PaymentSuccessDialogProps) {
-  if (!isOpen) {
-    return null;
-  }
+  useModalScroll(isOpen);
 
-  return (
-    <div className="fixed inset-0 z-50">
+  if (!isOpen) return null;
+
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999]">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl max-w-md mx-auto w-full border-t-4 border-black animate-slide-up max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl max-w-md mx-auto w-full border-t-4 border-black animate-slide-up h-[90dvh] sm:h-auto overflow-hidden flex flex-col">
         <div className="bg-[#B5E5CF] p-6 relative border-b-4 border-black rounded-t-3xl flex-shrink-0">
           <div className="w-12 h-1.5 bg-black rounded-full mx-auto mb-4"></div>
           <button
@@ -41,11 +45,11 @@ export default function PaymentSuccessDialog({
           </div>
         </div>
 
-        <div className="space-y-4 p-6 bg-white overflow-y-auto flex-1">
+        <div className="space-y-4 p-6 bg-white overflow-y-auto flex-1" style={{ overscrollBehavior: 'contain' }}>
           <div className="bg-white rounded-xl p-4 md:p-6 border-2 border-black">
             <p className="text-xs md:text-sm text-black mb-2 font-medium">Order ID</p>
             <p className="text-lg md:text-xl font-bold text-black font-mono break-all">
-              #{orderDetails?.orderId?.slice(-8).toUpperCase()}
+              {'#'}{orderDetails?.orderId?.slice(-8).toUpperCase()}
             </p>
           </div>
 
@@ -57,7 +61,7 @@ export default function PaymentSuccessDialog({
             <div className="flex justify-between items-center gap-4">
               <span className="text-sm md:text-base text-black font-medium">Amount Paid</span>
               <span className="font-bold text-black text-lg md:text-xl">
-                ₹{orderDetails?.totalAmount.toFixed(2)}
+                {'₹'}{orderDetails?.totalAmount.toFixed(2)}
               </span>
             </div>
             {orderDetails?.paymentId && (
@@ -78,9 +82,9 @@ export default function PaymentSuccessDialog({
 
           <div className="bg-white rounded-xl p-3 md:p-4 border-2 border-black">
             <p className="text-xs md:text-sm text-black font-medium">
-              <span className="font-bold">What's next?</span>
+              <span className="font-bold">{"What's next?"}</span>
               <br />
-              You'll receive an order confirmation email shortly. Track your order status from your orders page.
+              {"You'll receive an order confirmation email shortly. Track your order status from your orders page."}
             </p>
           </div>
 
@@ -100,4 +104,6 @@ export default function PaymentSuccessDialog({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

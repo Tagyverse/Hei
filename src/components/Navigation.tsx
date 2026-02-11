@@ -1,9 +1,11 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { ShoppingBag, Search, Home as HomeIcon, Store, User, LogOut, Settings, X, ShoppingCart, Package } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
-import { db } from '../lib/firebase';
-import { ref, get } from 'firebase/database';
+import { usePublishedData } from '../contexts/PublishedDataContext';
+import { objectToArray } from '../utils/publishedData';
 import type { Product } from '../types';
 
 interface NavigationProps {
@@ -18,6 +20,7 @@ interface NavigationProps {
 export default function Navigation({ currentPage, onNavigate, onLoginClick, onCartClick, onOrdersClick, onProductClick }: NavigationProps) {
   const { user, signOut } = useAuth();
   const { itemCount, addToCart } = useCart();
+  const { data: publishedData } = usePublishedData();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
@@ -48,97 +51,79 @@ export default function Navigation({ currentPage, onNavigate, onLoginClick, onCa
   });
 
   useEffect(() => {
-    async function loadNavStyle() {
-      try {
-        const styleRef = ref(db, 'navigation/style');
-        const styleSnap = await get(styleRef);
-
-        if (styleSnap.exists()) {
-          const style = styleSnap.val();
-          setNavStyle({
-            background: style.background || '#ffffff',
-            text: style.text || '#111827',
-            activeTab: style.activeTab || '#14b8a6',
-            inactiveButton: style.inactiveButton || '#f3f4f6',
-            borderRadius: style.borderRadius || 'full',
-            buttonSize: style.buttonSize || 'md',
-            themeMode: style.themeMode || 'default'
-          });
-
-          if (style.buttonLabels) {
-            setButtonLabels({
-              home: style.buttonLabels.home || 'Home',
-              shop: style.buttonLabels.shop || 'Shop All',
-              search: style.buttonLabels.search || 'Search',
-              cart: style.buttonLabels.cart || 'Cart',
-              myOrders: style.buttonLabels.myOrders || 'My Orders',
-              login: style.buttonLabels.login || 'Login',
-              signOut: style.buttonLabels.signOut || 'Sign Out',
-              admin: style.buttonLabels.admin || 'Admin'
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error loading navigation style:', error);
-      }
+    // Use default navigation style while loading
+    if (!publishedData) {
+      console.log('[NAVIGATION] Data still loading, using defaults');
+      return;
     }
 
-    loadNavStyle();
-  }, []);
-
-  useEffect(() => {
-    async function checkAdminStatus() {
-      if (!user) {
-        setIsAdmin(false);
-        return;
-      }
-
-      try {
-        const adminRef = ref(db, `admins/${user.uid}`);
-        const superAdminRef = ref(db, `super_admins/${user.uid}`);
-
-        const [adminSnapshot, superAdminSnapshot] = await Promise.all([
-          get(adminRef),
-          get(superAdminRef)
-        ]);
-
-        const isAdminUser = adminSnapshot.exists() || superAdminSnapshot.exists();
-        setIsAdmin(isAdminUser);
-      } catch (error) {
-        console.error('Error checking admin status:', error);
-        setIsAdmin(false);
-      }
+    if (!publishedData.navigation_settings) {
+      console.log('[NAVIGATION] No navigation_settings in published data, using defaults');
+      return;
     }
 
-    checkAdminStatus();
-  }, [user]);
+    try {
+      const style = publishedData.navigation_settings;
+      console.log('[NAVIGATION] Loaded navigation settings from R2:', style);
+      
+      setNavStyle({
+        background: style.background || '#ffffff',
+        text: style.text || '#111827',
+        activeTab: style.activeTab || '#14b8a6',
+        inactiveButton: style.inactiveButton || '#f3f4f6',
+        borderRadius: style.borderRadius || 'full',
+        buttonSize: style.buttonSize || 'md',
+        themeMode: style.themeMode || 'default'
+      });
+
+      if (style.buttonLabels) {
+        console.log('[NAVIGATION] Applying button labels:', style.buttonLabels);
+        setButtonLabels({
+          home: style.buttonLabels.home || 'Home',
+          shop: style.buttonLabels.shop || 'Shop All',
+          search: style.buttonLabels.search || 'Search',
+          cart: style.buttonLabels.cart || 'Cart',
+          myOrders: style.buttonLabels.myOrders || 'My Orders',
+          login: style.buttonLabels.login || 'Login',
+          signOut: style.buttonLabels.signOut || 'Sign Out',
+          admin: style.buttonLabels.admin || 'Admin'
+        });
+      } else {
+        console.log('[NAVIGATION] No button labels found, using defaults');
+      }
+    } catch (error) {
+      console.error('[NAVIGATION] Error loading navigation style:', error);
+    }
+  }, [publishedData]);
 
   useEffect(() => {
-    async function fetchProducts() {
-      setLoading(true);
-      try {
-        const productsRef = ref(db, 'products');
-        const productsSnapshot = await get(productsRef);
+    if (!user) {
+      setIsAdmin(false);
+      return;
+    }
 
-        const productsData: Product[] = [];
-        if (productsSnapshot.exists()) {
-          const data = productsSnapshot.val();
-          Object.keys(data).forEach(key => {
-            productsData.push({ id: key, ...data[key] });
-          });
-        }
+    try {
+      const isAdminUser = publishedData?.admins?.[user.uid] || publishedData?.super_admins?.[user.uid];
+      setIsAdmin(!!isAdminUser);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      setIsAdmin(false);
+    }
+  }, [user, publishedData]);
+
+  useEffect(() => {
+    if (searchOpen && publishedData?.products) {
+      try {
+        setLoading(true);
+        const productsData: Product[] = objectToArray<Product>(publishedData.products);
         setProducts(productsData);
+        setLoading(false);
       } catch (error) {
-        console.error('Error fetching products:', error);
-      } finally {
+        console.error('Error loading products:', error);
         setLoading(false);
       }
     }
-
-    if (searchOpen) {
-      fetchProducts();
-    }
-  }, [searchOpen]);
+  }, [searchOpen, publishedData]);
 
   useEffect(() => {
     if (searchQuery.trim() === '') {
@@ -387,7 +372,7 @@ export default function Navigation({ currentPage, onNavigate, onLoginClick, onCa
                       className="flex gap-4 bg-white rounded-2xl p-4 border-2 border-teal-200 hover:border-teal-400 transition-all cursor-pointer group"
                     >
                       <img
-                        src={product.image_url}
+                        src={product.image_url || "/placeholder.svg"}
                         alt={product.name}
                         className="w-20 h-20 object-cover rounded-xl border-2 border-gray-200 group-hover:scale-105 transition-transform"
                       />

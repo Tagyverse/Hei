@@ -12,6 +12,7 @@ import BottomSheet from '../components/BottomSheet';
 import ShimmerLoader from '../components/ShimmerLoader';
 import FilterBottomSheet from '../components/FilterBottomSheet';
 import LazyImage from '../components/LazyImage';
+import { getPublishedData, objectToArray } from '../utils/publishedData';
 import type { Product, Category } from '../types';
 
 interface ShopProps {
@@ -39,16 +40,17 @@ export default function Shop({ onCartClick }: ShopProps) {
   useEffect(() => {
     async function fetchCategories() {
       try {
-        const categoriesRef = ref(db, 'categories');
-        const categoriesSnapshot = await get(categoriesRef);
-
-        const categoriesData: Category[] = [];
-        if (categoriesSnapshot.exists()) {
-          const data = categoriesSnapshot.val();
-          Object.keys(data).forEach(key => {
-            categoriesData.push({ id: key, ...data[key] });
-          });
+        console.log('[SHOP] Loading categories...');
+        
+        // Try to load from R2 first
+        const publishedData = await getPublishedData();
+        
+        let categoriesData: Category[] = [];
+        
+        if (publishedData && publishedData.categories) {
+          categoriesData = objectToArray<Category>(publishedData.categories);
           categoriesData.sort((a, b) => a.name.localeCompare(b.name));
+          console.log(`[SHOP] Loaded ${categoriesData.length} categories`);
         }
 
         setCategories(categoriesData);
@@ -90,71 +92,71 @@ export default function Shop({ onCartClick }: ShopProps) {
     async function fetchProducts() {
       setLoading(true);
       try {
-        const productsRef = ref(db, 'products');
-        const productsSnapshot = await get(productsRef);
-
+        console.log('[SHOP] Loading products...');
+        
+        // Try to load from R2 first
+        const publishedData = await getPublishedData();
+        
         let productsData: Product[] = [];
-        if (productsSnapshot.exists()) {
-          const data = productsSnapshot.val();
-          Object.keys(data).forEach(key => {
-            productsData.push({ id: key, ...data[key] });
-          });
-
-          if (selectedCategory) {
-            productsData = productsData.filter(p => {
-              if (p.category_ids && p.category_ids.length > 0) {
-                return p.category_ids.includes(selectedCategory);
-              }
-              return p.category_id === selectedCategory;
-            });
-          }
-
-          if (showInStock) {
-            productsData = productsData.filter(p => p.in_stock);
-          }
-
-          if (showOnSale) {
-            productsData = productsData.filter(p => p.compare_at_price && p.compare_at_price > p.price);
-          }
-
-          switch (sortBy) {
-            case 'newest':
-              productsData.sort((a, b) => {
-                const dateA = new Date(a.created_at || 0).getTime();
-                const dateB = new Date(b.created_at || 0).getTime();
-                return dateB - dateA;
-              });
-              break;
-            case 'price-low':
-              productsData.sort((a, b) => a.price - b.price);
-              break;
-            case 'price-high':
-              productsData.sort((a, b) => b.price - a.price);
-              break;
-            case 'name-az':
-              productsData.sort((a, b) => a.name.localeCompare(b.name));
-              break;
-            case 'name-za':
-              productsData.sort((a, b) => b.name.localeCompare(a.name));
-              break;
-            case 'featured':
-            default:
-              productsData.sort((a, b) => {
-                if (a.featured && !b.featured) return -1;
-                if (!a.featured && b.featured) return 1;
-                const dateA = new Date(a.created_at || 0).getTime();
-                const dateB = new Date(b.created_at || 0).getTime();
-                return dateB - dateA;
-              });
-              break;
-          }
-
-          setProducts(productsData);
-        } else {
-          setProducts([]);
+        
+        if (publishedData && publishedData.products) {
+          productsData = objectToArray<Product>(publishedData.products);
+          console.log(`[SHOP] Loaded ${productsData.length} products`);
         }
+
+        if (selectedCategory) {
+          productsData = productsData.filter(p => {
+            if (p.category_ids && p.category_ids.length > 0) {
+              return p.category_ids.includes(selectedCategory);
+            }
+            return p.category_id === selectedCategory;
+          });
+        }
+
+        if (showInStock) {
+          productsData = productsData.filter(p => p.in_stock);
+        }
+
+        if (showOnSale) {
+          productsData = productsData.filter(p => p.compare_at_price && p.compare_at_price > p.price);
+        }
+
+        switch (sortBy) {
+          case 'newest':
+            productsData.sort((a, b) => {
+              const dateA = new Date(a.created_at || 0).getTime();
+              const dateB = new Date(b.created_at || 0).getTime();
+              return dateB - dateA;
+            });
+            break;
+          case 'price-low':
+            productsData.sort((a, b) => a.price - b.price);
+            break;
+          case 'price-high':
+            productsData.sort((a, b) => b.price - a.price);
+            break;
+          case 'name-az':
+            productsData.sort((a, b) => a.name.localeCompare(b.name));
+            break;
+          case 'name-za':
+            productsData.sort((a, b) => b.name.localeCompare(a.name));
+            break;
+          case 'featured':
+          default:
+            productsData.sort((a, b) => {
+              if (a.featured && !b.featured) return -1;
+              if (!a.featured && b.featured) return 1;
+              const dateA = new Date(a.created_at || 0).getTime();
+              const dateB = new Date(b.created_at || 0).getTime();
+              return dateB - dateA;
+            });
+            break;
+        }
+
+        setProducts(productsData);
       } catch (error) {
         console.error('Error fetching products:', error);
+        setProducts([]);
       } finally {
         setLoading(false);
       }

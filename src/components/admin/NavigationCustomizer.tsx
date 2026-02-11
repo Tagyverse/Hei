@@ -1,7 +1,10 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { Save, RotateCcw } from 'lucide-react';
-import { db } from '../../lib/firebase';
+import { db, auth } from '../../lib/firebase';
 import { ref, get, set } from 'firebase/database';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface NavTheme {
   name: string;
@@ -90,6 +93,7 @@ const BORDER_RADIUS_OPTIONS = [
 ];
 
 export default function NavigationCustomizer() {
+  const { user } = useAuth();
   const [navBgColor, setNavBgColor] = useState('#ffffff');
   const [navTextColor, setNavTextColor] = useState('#111827');
   const [activeTabColor, setActiveTabColor] = useState('#14b8a6');
@@ -115,11 +119,13 @@ export default function NavigationCustomizer() {
 
   const loadNavigation = async () => {
     try {
-      const styleRef = ref(db, 'navigation/style');
-      const styleSnap = await get(styleRef);
+      console.log('[NAV] Loading from navigation_settings...');
+      const navStyleRef = ref(db, 'navigation_settings');
+      const styleSnap = await get(navStyleRef);
 
       if (styleSnap.exists()) {
         const style = styleSnap.val();
+        console.log('[NAV] Loaded navigation_settings:', style);
         setNavBgColor(style.background || '#ffffff');
         setNavTextColor(style.text || '#111827');
         setActiveTabColor(style.activeTab || '#14b8a6');
@@ -139,15 +145,24 @@ export default function NavigationCustomizer() {
             admin: style.buttonLabels.admin || 'Admin'
           });
         }
+      } else {
+        console.log('[NAV] No navigation_settings found, using defaults');
       }
     } catch (error) {
-      console.error('Error loading navigation:', error);
+      console.error('[NAV] Error loading navigation:', error);
     }
   };
 
   const saveNavigation = async () => {
     setSaving(true);
     try {
+      // Check if user is authenticated
+      if (!user) {
+        alert('You must be logged in to save navigation settings. Please sign in first.');
+        setSaving(false);
+        return;
+      }
+
       const styleData = {
         background: navBgColor,
         text: navTextColor,
@@ -159,12 +174,21 @@ export default function NavigationCustomizer() {
         buttonLabels: buttonLabels
       };
 
-      await set(ref(db, 'navigation/style'), styleData);
+      console.log('[NAV] Saving to navigation_settings:', styleData);
+      
+      // Save to Firebase
+      await set(ref(db, 'navigation_settings'), styleData);
+      
+      // Save to localStorage for instant persistence (no reload needed)
+      localStorage.setItem('navigation_settings', JSON.stringify(styleData));
+      console.log('[NAV] Successfully saved to Firebase and localStorage');
 
       alert('Navigation settings saved successfully!');
+      // NO RELOAD - data already saved to localStorage and component state
     } catch (error) {
-      console.error('Error saving navigation:', error);
-      alert('Failed to save navigation settings');
+      console.error('[NAV] Error saving navigation:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      alert('Failed to save navigation settings: ' + errorMsg);
     } finally {
       setSaving(false);
     }
@@ -197,6 +221,13 @@ export default function NavigationCustomizer() {
 
   return (
     <div className="space-y-6">
+      {/* Auth Status Indicator */}
+      <div className={`p-3 rounded-lg ${user ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+        <p className={`text-sm font-medium ${user ? 'text-green-800' : 'text-red-800'}`}>
+          {user ? `✓ Signed in as ${user.email}` : '✗ Not authenticated - Please sign in to save navigation settings'}
+        </p>
+      </div>
+
       <div className="flex justify-between items-center flex-wrap gap-3">
         <h3 className="text-lg font-semibold text-gray-900">Navigation Settings</h3>
         <div className="flex gap-2">
