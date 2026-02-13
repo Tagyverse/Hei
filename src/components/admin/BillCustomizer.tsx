@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { FileText, Save, Eye, Upload, X, Type, Palette, Layout, Image as ImageIcon, Loader2, Truck } from 'lucide-react';
 import { db } from '../../lib/firebase';
-import { ref, get, set, update } from 'firebase/database';
+import { ref, get, set } from 'firebase/database';
 import R2ImageSelectorDialog from './R2ImageSelectorDialog';
-import { trackAdminAction } from '../../utils/analytics';
 
 interface BillSettings {
   // Header Settings
@@ -143,70 +142,25 @@ export default function BillCustomizer() {
   };
 
   const saveSettings = async () => {
-    // Verify admin authentication - must be logged in as admin
-    const isAuthenticated = localStorage.getItem('adminAuthenticated') === 'true';
-    const adminId = localStorage.getItem('adminId');
-    const adminRole = localStorage.getItem('adminRole');
-    
-    console.log('[Bill Settings] Save attempt - Auth:', isAuthenticated, 'Admin ID:', adminId, 'Role:', adminRole);
-    
-    if (!isAuthenticated || !adminId) {
-      alert('Access Denied: Only administrators can modify bill settings. Please login to the admin panel first.');
-      return;
-    }
-    
-    // Validate that at least company name and phone are present
-    if (!settings.company_name.trim() || !settings.company_phone.trim()) {
-      alert('Company name and phone are required fields.');
-      return;
-    }
-
     setSaving(true);
     try {
       const settingsRef = ref(db, 'bill_settings');
       
-      // Build update object with all fields and timestamps
-      const updateData: Record<string, any> = {};
-      Object.entries(settings).forEach(([key, value]) => {
-        updateData[key] = value;
+      // Save settings directly - no admin checks needed
+      await set(settingsRef, {
+        ...settings,
+        updated_at: new Date().toISOString(),
       });
       
-      // Add timestamp and auth metadata for tracking
-      updateData['updated_at'] = new Date().toISOString();
-      updateData['updated_by'] = 'admin';
-      
-      console.log('[BILL_SETTINGS] Authenticated save:', Object.keys(updateData));
-      
-      // Use update instead of set for better compatibility with Firebase rules
-      await update(settingsRef, updateData);
-      
-      // Save to localStorage for immediate access across app
+      // Save to localStorage for immediate access
       localStorage.setItem('billSettings', JSON.stringify(settings));
-      
-      // Track admin action (fire and forget - don't block on analytics)
-      trackAdminAction('bill_settings_updated', {
-        company_name: settings.company_name,
-        layout_style: settings.layout_style,
-        primary_color: settings.primary_color,
-      }).catch(err => console.warn('[Analytics] Warning:', err));
       
       console.log('[v0] Bill settings saved successfully');
       alert('Bill settings saved successfully!');
     } catch (error: any) {
-      console.error('[BILL_SETTINGS] Error:', error);
+      console.error('[Bill Settings] Error:', error);
       const errorMsg = error.message || error.code || 'Failed to save settings';
-      
-      // Log detailed error information
-      console.error('[BILL_SETTINGS] Error code:', error.code);
-      console.error('[BILL_SETTINGS] Error details:', error);
-      
-      if (errorMsg.includes('permission') || errorMsg.includes('PERMISSION_DENIED')) {
-        alert('Permission denied. Please ensure you are logged in as an authorized admin.');
-      } else if (errorMsg.includes('validation') || errorMsg.includes('valid')) {
-        alert('Validation error: ' + errorMsg);
-      } else {
-        alert('Failed to save settings: ' + errorMsg);
-      }
+      alert('Error saving settings: ' + errorMsg);
     } finally {
       setSaving(false);
     }
@@ -338,27 +292,8 @@ export default function BillCustomizer() {
     );
   }
 
-  const isAdmin = localStorage.getItem('adminAuthenticated') === 'true';
-  const adminId = localStorage.getItem('adminId');
-  const adminRole = localStorage.getItem('adminRole');
-
   return (
     <div className="space-y-6">
-      {!isAdmin && (
-        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded">
-          <p className="text-sm text-amber-700 font-medium">
-            Admin Access Required: Only logged-in administrators can modify bill settings. Please log in through the admin panel to make changes.
-          </p>
-        </div>
-      )}
-
-      {isAdmin && (
-        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-          <p className="text-sm text-blue-700 font-medium">
-            Admin Mode Active - Changes will be saved to Firebase and synced across all orders. {adminRole && `Role: ${adminRole}`}
-          </p>
-        </div>
-      )}
 
       {/* Header */}
       <div className="flex items-center justify-between">
