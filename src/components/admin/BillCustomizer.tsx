@@ -117,10 +117,25 @@ export default function BillCustomizer() {
       const settingsRef = ref(db, 'bill_settings');
       const snapshot = await get(settingsRef);
       if (snapshot.exists()) {
-        setSettings({ ...defaultSettings, ...snapshot.val() });
+        const loadedSettings = { ...defaultSettings, ...snapshot.val() };
+        setSettings(loadedSettings);
+        // Also save to localStorage for immediate access
+        localStorage.setItem('billSettings', JSON.stringify(loadedSettings));
+      } else {
+        // If no Firebase settings, use defaults and save to localStorage
+        localStorage.setItem('billSettings', JSON.stringify(defaultSettings));
       }
     } catch (error) {
       console.error('Error loading bill settings:', error);
+      // Fallback to localStorage if Firebase fails
+      try {
+        const saved = localStorage.getItem('billSettings');
+        if (saved) {
+          setSettings(JSON.parse(saved));
+        }
+      } catch (e) {
+        console.error('Error loading from localStorage:', e);
+      }
     } finally {
       setLoading(false);
     }
@@ -154,6 +169,9 @@ export default function BillCustomizer() {
       
       // Use update instead of set for better compatibility with Firebase rules
       await update(settingsRef, updateData);
+      
+      // Save to localStorage for immediate access across app
+      localStorage.setItem('billSettings', JSON.stringify(settings));
       
       console.log('[BILL_SETTINGS] Saved successfully');
       alert('Bill settings saved successfully!');
@@ -303,8 +321,18 @@ export default function BillCustomizer() {
     );
   }
 
+  const isAdmin = localStorage.getItem('adminAuthenticated') === 'true';
+
   return (
     <div className="space-y-6">
+      {!isAdmin && (
+        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded">
+          <p className="text-sm text-amber-700 font-medium">
+            ⚠️ Admin Access Required: Only logged-in administrators can modify bill settings. Please log in through the admin panel to make changes.
+          </p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

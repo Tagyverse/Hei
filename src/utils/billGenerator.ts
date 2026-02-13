@@ -443,6 +443,112 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
       font-weight: 700;
     }
 
+    @media screen and (max-width: 480px) {
+      .invoice-container {
+        padding: 12px 15px;
+        border: 1px solid ${s.primary_color};
+      }
+
+      .header {
+        flex-direction: column;
+        gap: 12px;
+        padding-bottom: 12px;
+        margin-bottom: 15px;
+      }
+
+      .company-info {
+        width: 100%;
+      }
+
+      .invoice-title {
+        text-align: left;
+        width: 100%;
+      }
+
+      .invoice-title h1 {
+        font-size: 20px;
+        margin-bottom: 3px;
+      }
+
+      .items-table {
+        font-size: 11px;
+        margin-bottom: 15px;
+      }
+
+      .items-table th {
+        padding: 8px 4px;
+        font-size: 10px;
+      }
+
+      .items-table td {
+        padding: 8px 4px;
+        font-size: 11px;
+      }
+
+      .product-image {
+        width: 40px;
+        height: 40px;
+      }
+
+      .item-details {
+        gap: 8px;
+      }
+
+      .item-info {
+        font-size: 11px;
+      }
+
+      .totals {
+        max-width: 100%;
+        margin-top: 10px;
+      }
+
+      .total-row {
+        padding: 6px 0;
+        font-size: 12px;
+      }
+
+      .total-row.grand-total {
+        padding: 10px 12px;
+        font-size: 14px;
+      }
+
+      .thank-you {
+        margin-top: 12px;
+        font-size: 12px;
+      }
+
+      .shipping-labels {
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      .label-box {
+        padding: 12px;
+      }
+
+      .label-box h3 {
+        font-size: 11px;
+        margin-bottom: 8px;
+      }
+
+      .label-box p {
+        font-size: 10px;
+        margin-bottom: 3px;
+      }
+
+      .footer {
+        margin-top: 12px;
+        padding-top: 10px;
+        font-size: 9px;
+      }
+
+      .cut-line {
+        margin: 12px 0 10px 0;
+      }
+    }
+
     @media print {
       body {
         padding: 0;
