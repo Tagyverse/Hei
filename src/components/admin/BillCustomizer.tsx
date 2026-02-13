@@ -3,6 +3,7 @@ import { FileText, Save, Eye, Upload, X, Type, Palette, Layout, Image as ImageIc
 import { db } from '../../lib/firebase';
 import { ref, get, set, update } from 'firebase/database';
 import R2ImageSelectorDialog from './R2ImageSelectorDialog';
+import { trackAdminAction } from '../../utils/analytics';
 
 interface BillSettings {
   // Header Settings
@@ -145,9 +146,18 @@ export default function BillCustomizer() {
     // Verify admin authentication - must be logged in as admin
     const isAuthenticated = localStorage.getItem('adminAuthenticated') === 'true';
     const adminId = localStorage.getItem('adminId');
+    const adminRole = localStorage.getItem('adminRole');
+    
+    console.log('[Bill Settings] Save attempt - Auth:', isAuthenticated, 'Admin ID:', adminId, 'Role:', adminRole);
     
     if (!isAuthenticated || !adminId) {
-      alert('Access Denied: You are not authorized to edit bill settings. Only logged-in admins can modify these settings. Please login to the admin panel first.');
+      alert('Access Denied: Only administrators can modify bill settings. Please login to the admin panel first.');
+      return;
+    }
+    
+    // Validate that at least company name and phone are present
+    if (!settings.company_name.trim() || !settings.company_phone.trim()) {
+      alert('Company name and phone are required fields.');
       return;
     }
 
@@ -172,6 +182,13 @@ export default function BillCustomizer() {
       
       // Save to localStorage for immediate access across app
       localStorage.setItem('billSettings', JSON.stringify(settings));
+      
+      // Track admin action
+      await trackAdminAction('bill_settings_updated', {
+        company_name: settings.company_name,
+        layout_style: settings.layout_style,
+        primary_color: settings.primary_color,
+      });
       
       console.log('[BILL_SETTINGS] Saved successfully');
       alert('Bill settings saved successfully!');
@@ -322,13 +339,23 @@ export default function BillCustomizer() {
   }
 
   const isAdmin = localStorage.getItem('adminAuthenticated') === 'true';
+  const adminId = localStorage.getItem('adminId');
+  const adminRole = localStorage.getItem('adminRole');
 
   return (
     <div className="space-y-6">
       {!isAdmin && (
         <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded">
           <p className="text-sm text-amber-700 font-medium">
-            ⚠️ Admin Access Required: Only logged-in administrators can modify bill settings. Please log in through the admin panel to make changes.
+            Admin Access Required: Only logged-in administrators can modify bill settings. Please log in through the admin panel to make changes.
+          </p>
+        </div>
+      )}
+
+      {isAdmin && (
+        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+          <p className="text-sm text-blue-700 font-medium">
+            Admin Mode Active - Changes will be saved to Firebase and synced across all orders. {adminRole && `Role: ${adminRole}`}
           </p>
         </div>
       )}

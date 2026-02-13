@@ -454,6 +454,100 @@
       }
     },
 
+    "bill_settings": {
+      ".read": true,
+      ".indexOn": ["updated_at"],
+      ".write": "auth != null",
+      ".validate": "newData.hasChildren(['company_name', 'company_phone']) || !newData.exists()",
+      "logo_url": {
+        ".validate": "!newData.exists() || newData.isString()"
+      },
+      "company_name": {
+        ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+      },
+      "company_tagline": {
+        ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 200)"
+      },
+      "company_address": {
+        ".validate": "!newData.exists() || newData.isString()"
+      },
+      "company_email": {
+        ".validate": "!newData.exists() || newData.isString()"
+      },
+      "company_phone": {
+        ".validate": "newData.isString() && newData.val().length > 0"
+      },
+      "company_gst": {
+        ".validate": "!newData.exists() || newData.isString() || newData.val() === null"
+      },
+      "layout_style": {
+        ".validate": "!newData.exists() || (newData.isString() && (newData.val() === 'modern' || newData.val() === 'classic' || newData.val() === 'minimal' || newData.val() === 'detailed'))"
+      },
+      "show_product_images": {
+        ".validate": "!newData.exists() || newData.isBoolean()"
+      },
+      "show_shipping_label": {
+        ".validate": "!newData.exists() || newData.isBoolean()"
+      },
+      "show_cut_line": {
+        ".validate": "!newData.exists() || newData.isBoolean()"
+      },
+      "primary_color": {
+        ".validate": "!newData.exists() || newData.isString()"
+      },
+      "secondary_color": {
+        ".validate": "!newData.exists() || newData.isString()"
+      },
+      "header_bg_color": {
+        ".validate": "!newData.exists() || newData.isString()"
+      },
+      "table_header_color": {
+        ".validate": "!newData.exists() || newData.isString()"
+      },
+      "font_family": {
+        ".validate": "!newData.exists() || newData.isString()"
+      },
+      "header_font_size": {
+        ".validate": "!newData.exists() || (newData.isNumber() && newData.val() > 0 && newData.val() <= 72)"
+      },
+      "body_font_size": {
+        ".validate": "!newData.exists() || (newData.isNumber() && newData.val() > 0 && newData.val() <= 36)"
+      },
+      "footer_text": {
+        ".validate": "!newData.exists() || newData.isString()"
+      },
+      "thank_you_message": {
+        ".validate": "!newData.exists() || newData.isString()"
+      },
+      "from_name": {
+        ".validate": "!newData.exists() || newData.isString()"
+      },
+      "from_address": {
+        ".validate": "!newData.exists() || newData.isString()"
+      },
+      "from_city": {
+        ".validate": "!newData.exists() || newData.isString()"
+      },
+      "from_state": {
+        ".validate": "!newData.exists() || newData.isString()"
+      },
+      "from_pincode": {
+        ".validate": "!newData.exists() || newData.isString()"
+      },
+      "from_phone": {
+        ".validate": "!newData.exists() || newData.isString()"
+      },
+      "updated_at": {
+        ".validate": "!newData.exists() || newData.isString()"
+      },
+      "updated_by": {
+        ".validate": "!newData.exists() || newData.isString()"
+      },
+      "$other": {
+        ".validate": false
+      }
+    },
+
     "favorites": {
       ".read": false,
       "$userId": {
@@ -1149,6 +1243,81 @@
       },
       "updated_at": {
         ".validate": "!newData.exists() || newData.isString()"
+      }
+    },
+
+    "analytics": {
+      ".read": "auth != null",
+      ".indexOn": ["timestamp", "event_type"],
+      "$eventId": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['event_type', 'timestamp']) || newData.hasChildren(['action', 'timestamp'])",
+        "event_type": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "action": {
+          ".validate": "!newData.exists() || newData.isString()"
+        },
+        "timestamp": {
+          ".validate": "newData.isString() || newData.isNumber()"
+        },
+        "user_id": {
+          ".validate": "!newData.exists() || newData.isString()"
+        },
+        "session_id": {
+          ".validate": "!newData.exists() || newData.isString()"
+        },
+        "page_url": {
+          ".validate": "!newData.exists() || newData.isString()"
+        },
+        "referrer": {
+          ".validate": "!newData.exists() || newData.isString()"
+        },
+        "data": {
+          ".validate": "!newData.exists() || newData.hasChildren()"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+
+    "traffic_logs": {
+      ".read": "auth != null",
+      ".indexOn": ["timestamp", "status"],
+      "$logId": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['timestamp']) || newData.hasChildren(['created_at'])",
+        "timestamp": {
+          ".validate": "!newData.exists() || (newData.isString() || newData.isNumber())"
+        },
+        "created_at": {
+          ".validate": "!newData.exists() || (newData.isString() || newData.isNumber())"
+        },
+        "endpoint": {
+          ".validate": "!newData.exists() || newData.isString()"
+        },
+        "method": {
+          ".validate": "!newData.exists() || newData.isString()"
+        },
+        "status": {
+          ".validate": "!newData.exists() || newData.isNumber()"
+        },
+        "response_time_ms": {
+          ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= 0)"
+        },
+        "user_id": {
+          ".validate": "!newData.exists() || newData.isString() || newData.val() === null"
+        },
+        "ip_address": {
+          ".validate": "!newData.exists() || newData.isString()"
+        },
+        "user_agent": {
+          ".validate": "!newData.exists() || newData.isString()"
+        },
+        "$other": {
+          ".validate": false
+        }
       }
     }
   }

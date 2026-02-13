@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
 import { ref, get } from 'firebase/database';
 import { downloadBillAsPDF, downloadBillAsJPG, printBill } from '../utils/billGenerator';
+import { trackBillDownload } from '../utils/analytics';
 
 interface Order {
   id: string;
@@ -144,6 +145,7 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
     setDownloadingPDF(true);
     try {
       await downloadBillAsPDF(selectedOrder, { site_name: 'Hei', contact_email: '', contact_phone: '' }, 0, billSettings);
+      await trackBillDownload(selectedOrder.id, 'pdf');
     } catch (error) {
       console.error('Error downloading PDF:', error);
     } finally {
@@ -156,6 +158,7 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
     setDownloadingJPG(true);
     try {
       await downloadBillAsJPG(selectedOrder, { site_name: 'Hei', contact_email: '', contact_phone: '' }, 0, billSettings);
+      await trackBillDownload(selectedOrder.id, 'jpg');
     } catch (error) {
       console.error('Error downloading JPG:', error);
     } finally {
@@ -166,6 +169,7 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
   const handlePrint = () => {
     if (!selectedOrder) return;
     printBill(selectedOrder, { site_name: 'Hei', contact_email: '', contact_phone: '' }, 0, billSettings);
+    trackBillDownload(selectedOrder.id, 'print');
   };
 
   if (!isOpen) return null;
