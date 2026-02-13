@@ -183,14 +183,14 @@ export default function BillCustomizer() {
       // Save to localStorage for immediate access across app
       localStorage.setItem('billSettings', JSON.stringify(settings));
       
-      // Track admin action
-      await trackAdminAction('bill_settings_updated', {
+      // Track admin action (fire and forget - don't block on analytics)
+      trackAdminAction('bill_settings_updated', {
         company_name: settings.company_name,
         layout_style: settings.layout_style,
         primary_color: settings.primary_color,
-      });
+      }).catch(err => console.warn('[Analytics] Warning:', err));
       
-      console.log('[BILL_SETTINGS] Saved successfully');
+      console.log('[v0] Bill settings saved successfully');
       alert('Bill settings saved successfully!');
     } catch (error: any) {
       console.error('[BILL_SETTINGS] Error:', error);

@@ -26,8 +26,8 @@ export async function trackPageView(path: string, metadata?: Record<string, any>
     const userId = localStorage.getItem('userId');
     const timestamp = new Date().toISOString();
 
-    // Log to API endpoint
-    await fetch('/api/track-view', {
+    // Log to API endpoint (fire and forget)
+    fetch('/api/track-view', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -40,10 +40,10 @@ export async function trackPageView(path: string, metadata?: Record<string, any>
         timestamp,
         metadata,
       }),
-    });
+    }).catch(err => console.warn('[Analytics API] Warning:', err));
 
-    // Also log to Firebase for persistent tracking
-    await logToFirebase('page_view', {
+    // Also log to Firebase for persistent tracking (fire and forget)
+    logToFirebase('page_view', {
       path,
       referrer: document.referrer,
       sessionId,
@@ -51,9 +51,9 @@ export async function trackPageView(path: string, metadata?: Record<string, any>
       metadata,
     });
 
-    console.log('[Analytics] Page view tracked:', path);
+    console.log('[v0] Page view tracked:', path);
   } catch (error) {
-    console.error('Failed to track page view:', error);
+    console.warn('[Analytics] Warning tracking page view:', error instanceof Error ? error.message : String(error));
   }
 }
 
@@ -68,15 +68,16 @@ export async function trackEvent(
     const sessionId = getSessionId();
     const userId = localStorage.getItem('userId');
 
-    await logToFirebase(eventType, {
+    // Fire and forget
+    logToFirebase(eventType, {
       ...eventData,
       sessionId,
       userId,
     });
 
-    console.log('[Analytics] Event tracked:', eventType, eventData);
+    console.log('[v0] Event tracked:', eventType, eventData);
   } catch (error) {
-    console.error('Failed to track event:', error);
+    console.warn('[Analytics] Warning:', error instanceof Error ? error.message : String(error));
   }
 }
 
@@ -88,14 +89,22 @@ async function logToFirebase(
   data: Record<string, any>
 ): Promise<void> {
   try {
+    if (!db) {
+      console.warn('[Firebase Analytics] Database not initialized');
+      return;
+    }
+
     const analyticsRef = ref(db, 'analytics');
     await push(analyticsRef, {
       event_type: eventType,
       timestamp: new Date().toISOString(),
       ...data,
     });
+    
+    console.log('[Firebase Analytics] Event logged:', eventType);
   } catch (error) {
-    console.error('[Firebase Analytics] Error logging:', error);
+    // Silently fail - don't break app if Firebase has issues
+    console.warn('[Firebase Analytics] Warning:', error instanceof Error ? error.message : String(error));
   }
 }
 
