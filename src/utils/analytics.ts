@@ -1,6 +1,3 @@
-import { db } from '../lib/firebase';
-import { ref, push } from 'firebase/database';
-
 let sessionId: string | null = null;
 
 function getSessionId(): string {
@@ -18,15 +15,14 @@ function getSessionId(): string {
 }
 
 /**
- * Track page view with both API and Firebase
+ * Track page view to KV via API endpoint
  */
 export async function trackPageView(path: string, metadata?: Record<string, any>) {
   try {
     const sessionId = getSessionId();
     const userId = localStorage.getItem('userId');
-    const timestamp = new Date().toISOString();
 
-    // Log to API endpoint (fire and forget)
+    // Log to KV API endpoint (fire and forget)
     fetch('/api/track-view', {
       method: 'POST',
       headers: {
@@ -37,28 +33,19 @@ export async function trackPageView(path: string, metadata?: Record<string, any>
         referrer: document.referrer,
         sessionId,
         userId,
-        timestamp,
+        timestamp: new Date().toISOString(),
         metadata,
       }),
-    }).catch(err => console.warn('[Analytics API] Warning:', err));
-
-    // Also log to Firebase for persistent tracking (fire and forget)
-    logToFirebase('page_view', {
-      path,
-      referrer: document.referrer,
-      sessionId,
-      userId,
-      metadata,
-    });
+    }).catch(err => console.warn('[KV Analytics] Warning:', err));
 
     console.log('[v0] Page view tracked:', path);
   } catch (error) {
-    console.warn('[Analytics] Warning tracking page view:', error instanceof Error ? error.message : String(error));
+    console.warn('[Analytics] Warning:', error instanceof Error ? error.message : String(error));
   }
 }
 
 /**
- * Track custom events to Firebase
+ * Track custom events to KV via API endpoint
  */
 export async function trackEvent(
   eventType: string,
@@ -68,43 +55,24 @@ export async function trackEvent(
     const sessionId = getSessionId();
     const userId = localStorage.getItem('userId');
 
-    // Fire and forget
-    logToFirebase(eventType, {
-      ...eventData,
-      sessionId,
-      userId,
-    });
+    // Log to KV API endpoint (fire and forget)
+    fetch('/api/track-event', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        event_type: eventType,
+        sessionId,
+        userId,
+        timestamp: new Date().toISOString(),
+        data: eventData,
+      }),
+    }).catch(err => console.warn('[KV Analytics] Warning:', err));
 
     console.log('[v0] Event tracked:', eventType, eventData);
   } catch (error) {
     console.warn('[Analytics] Warning:', error instanceof Error ? error.message : String(error));
-  }
-}
-
-/**
- * Log to Firebase analytics collection
- */
-async function logToFirebase(
-  eventType: string,
-  data: Record<string, any>
-): Promise<void> {
-  try {
-    if (!db) {
-      console.warn('[Firebase Analytics] Database not initialized');
-      return;
-    }
-
-    const analyticsRef = ref(db, 'analytics');
-    await push(analyticsRef, {
-      event_type: eventType,
-      timestamp: new Date().toISOString(),
-      ...data,
-    });
-    
-    console.log('[Firebase Analytics] Event logged:', eventType);
-  } catch (error) {
-    // Silently fail - don't break app if Firebase has issues
-    console.warn('[Firebase Analytics] Warning:', error instanceof Error ? error.message : String(error));
   }
 }
 

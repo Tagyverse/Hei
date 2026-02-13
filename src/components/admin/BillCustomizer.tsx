@@ -146,19 +146,36 @@ export default function BillCustomizer() {
     try {
       const settingsRef = ref(db, 'bill_settings');
       
-      // Save settings directly - no admin checks needed
-      await set(settingsRef, {
+      console.log('[v0] Saving bill settings...', Object.keys(settings).length, 'fields');
+      
+      // Prepare settings data with timestamp
+      const dataToSave = {
         ...settings,
         updated_at: new Date().toISOString(),
-      });
+      };
+      
+      console.log('[v0] Data to save:', Object.keys(dataToSave));
+      
+      // Save settings to Firebase
+      await set(settingsRef, dataToSave);
+      
+      console.log('[v0] Firebase save completed');
       
       // Save to localStorage for immediate access
       localStorage.setItem('billSettings', JSON.stringify(settings));
       
-      console.log('[v0] Bill settings saved successfully');
+      console.log('[v0] LocalStorage save completed');
+      console.log('[v0] Bill settings saved successfully!');
+      
       alert('Bill settings saved successfully!');
     } catch (error: any) {
-      console.error('[Bill Settings] Error:', error);
+      console.error('[v0] Bill Settings Error:', {
+        message: error.message,
+        code: error.code,
+        name: error.name,
+        full: error,
+      });
+      
       const errorMsg = error.message || error.code || 'Failed to save settings';
       alert('Error saving settings: ' + errorMsg);
     } finally {

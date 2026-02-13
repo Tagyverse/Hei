@@ -145,10 +145,10 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
     setDownloadingPDF(true);
     try {
       await downloadBillAsPDF(selectedOrder, { site_name: 'Hei', contact_email: '', contact_phone: '' }, 0, billSettings);
-      // Track async (fire and forget)
-      trackBillDownload(selectedOrder.id, 'pdf').catch(err => console.warn('[Analytics] Warning:', err));
+      // Track download (fire and forget - don't block UI)
+      trackBillDownload(selectedOrder.id, 'pdf');
     } catch (error) {
-      console.error('Error downloading PDF:', error);
+      console.error('[v0] Error downloading PDF:', error);
     } finally {
       setDownloadingPDF(false);
     }
@@ -159,10 +159,10 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
     setDownloadingJPG(true);
     try {
       await downloadBillAsJPG(selectedOrder, { site_name: 'Hei', contact_email: '', contact_phone: '' }, 0, billSettings);
-      // Track async (fire and forget)
-      trackBillDownload(selectedOrder.id, 'jpg').catch(err => console.warn('[Analytics] Warning:', err));
+      // Track download (fire and forget - don't block UI)
+      trackBillDownload(selectedOrder.id, 'jpg');
     } catch (error) {
-      console.error('Error downloading JPG:', error);
+      console.error('[v0] Error downloading JPG:', error);
     } finally {
       setDownloadingJPG(false);
     }
@@ -171,8 +171,8 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
   const handlePrint = () => {
     if (!selectedOrder) return;
     printBill(selectedOrder, { site_name: 'Hei', contact_email: '', contact_phone: '' }, 0, billSettings);
-    // Track async (fire and forget)
-    trackBillDownload(selectedOrder.id, 'print').catch(err => console.warn('[Analytics] Warning:', err));
+    // Track download (fire and forget - don't block UI)
+    trackBillDownload(selectedOrder.id, 'print');
   };
 
   if (!isOpen) return null;
