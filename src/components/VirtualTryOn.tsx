@@ -20,7 +20,7 @@ interface ErrorDialogProps {
   onRetry?: () => void;
 }
 
-function ErrorDialog({ isOpen, title, message, onClose, onRetry }: ErrorDialogProps) {
+const ErrorDialog = React.memo(function ErrorDialog({ isOpen, title, message, onClose, onRetry }: ErrorDialogProps) {
   if (!isOpen) return null;
 
   return (
@@ -57,7 +57,7 @@ function ErrorDialog({ isOpen, title, message, onClose, onRetry }: ErrorDialogPr
       </div>
     </div>
   );
-}
+});
 
 export default function VirtualTryOn({ isOpen, onClose, product: initialProduct }: VirtualTryOnProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -184,15 +184,25 @@ export default function VirtualTryOn({ isOpen, onClose, product: initialProduct 
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
+      // Stop all tracks properly
       streamRef.current.getTracks().forEach((track) => {
-        track.stop();
+        try {
+          track.stop();
+          console.log('[V0] Camera track stopped:', track.kind);
+        } catch (e) {
+          console.error('[V0] Error stopping track:', e);
+        }
       });
       streamRef.current = null;
     }
 
     if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.srcObject = null;
+      try {
+        videoRef.current.pause();
+        videoRef.current.srcObject = null;
+      } catch (e) {
+        console.error('[V0] Error pausing video:', e);
+      }
     }
 
     setIsCameraReady(false);
@@ -206,29 +216,23 @@ export default function VirtualTryOn({ isOpen, onClose, product: initialProduct 
       setError(null);
       setShowErrorDialog(false);
       setIsCameraReady(false);
-
-      if (!videoRef.current) {
-        throw new Error('Video element not ready');
-      }
-
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera API not supported on this browser.\n\nPlease use a modern browser like Chrome, Firefox, Safari, or Edge.');
-      }
-
+      
+      // Stop previous camera stream to avoid "already in use" error
       stopCamera();
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      const currentMode = currentFacingModeRef.current;
-
+      
+      // Wait a bit for tracks to fully release
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const constraints = {
         video: {
-          facingMode: currentMode,
+          facingMode: selectedCamera || 'user',
           width: { ideal: 1280, min: 640 },
           height: { ideal: 720, min: 480 },
         },
         audio: false,
       };
 
+      console.log('[V0] Requesting camera with facingMode:', selectedCamera);
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
       if (!isMountedRef.current) {
@@ -262,9 +266,35 @@ export default function VirtualTryOn({ isOpen, onClose, product: initialProduct 
       });
     } catch (err: any) {
       console.error('Camera error:', err);
+      
+      let errorTitle = 'Camera Access Error';
+      let errorMessage = 'Failed to access camera. Please check permissions and try again.';
+      
+      if (err.name === 'NotAllowedError') {
+        errorTitle = 'Permission Denied';
+        errorMessage = 'Camera permission was denied. Please enable it in your browser settings:\n\n' +
+                      '1. Click the camera/lock icon in the address bar\n' +
+                      '2. Set Camera to "Allow"\n' +
+                      '3. Refresh and try again';
+      } else if (err.name === 'NotFoundError') {
+        errorTitle = 'No Camera Found';
+        errorMessage = 'No camera device was detected on this device. Please connect a camera and try again.';
+      } else if (err.name === 'NotReadableError') {
+        errorTitle = 'Camera In Use';
+        errorMessage = 'Your camera is already being used by another application.\n\nPlease close that application and try again.';
+      } else if (err.name === 'OverconstrainedError') {
+        errorTitle = 'Unsupported Camera';
+        errorMessage = 'Your camera does not support the required specifications.\n\nTry switching cameras if available.';
+      } else if (err.message?.includes('not supported')) {
+        errorTitle = 'Browser Not Supported';
+        errorMessage = 'Your browser does not support camera access.\n\nPlease use Chrome, Firefox, Safari, or Edge.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       setError({
-        title: 'Camera Access Error',
-        message: err.message || 'Failed to access camera. Please check permissions and try again.'
+        title: errorTitle,
+        message: errorMessage
       });
       setShowErrorDialog(true);
       setIsLoading(false);
@@ -472,6 +502,8 @@ export default function VirtualTryOn({ isOpen, onClose, product: initialProduct 
             src={selectedModel.image_url}
             alt={selectedModel.name}
             className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
@@ -500,6 +532,8 @@ export default function VirtualTryOn({ isOpen, onClose, product: initialProduct 
                 src={productImageUrl}
                 alt="Product Preview"
                 className="object-contain"
+                loading="lazy"
+                decoding="async"
                 style={{
                   width: '300px',
                   height: '300px',

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Save, X, Eye, Palette, Loader2, RefreshCw } from 'lucide-react';
 import { db } from '../../lib/firebase';
-import { ref, get, set } from 'firebase/database';
+import { ref, get, set, update } from 'firebase/database';
 
 interface CardDesign {
   section_name: string;
@@ -310,7 +310,7 @@ export default function CardDesignManager() {
       if (cardDesign.image_border_radius) designData.image_border_radius = cardDesign.image_border_radius;
       if (cardDesign.button_style) designData.button_style = cardDesign.button_style;
 
-      await set(designRef, designData);
+      await update(designRef, designData);
       alert('Card design saved successfully!');
     } catch (error) {
       console.error('Error saving card design:', error);

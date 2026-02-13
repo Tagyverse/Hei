@@ -46,6 +46,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [toastMessage, setToastMessage] = useState('');
   const [dynamicShippingCharge, setDynamicShippingCharge] = useState<number>(80);
   const [taxSettings, setTaxSettings] = useState<TaxSettings | null>(null);
+  const [billSettings, setBillSettings] = useState<any>(null);
 
   useEffect(() => {
     loadCartFromLocalStorage();
@@ -75,6 +76,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
           tax_label: 'GST',
           include_in_price: true,
         });
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const billRef = ref(db, 'bill_settings');
+    const unsubscribe = onValue(billRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setBillSettings(snapshot.val());
       }
     });
 
@@ -186,8 +198,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const subtotal = items.reduce((sum, item) => sum + getItemPrice(item) * item.quantity, 0);
-  const FREE_SHIPPING_THRESHOLD = 2000;
-  const shippingCharge = items.length > 0 ? (subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : dynamicShippingCharge) : 0;
+  
+  // Get free delivery threshold from bill settings, default to 2000
+  const freeDeliveryThreshold = billSettings?.free_delivery_minimum_amount || 2000;
+  
+  // Calculate shipping: 0 if above threshold, else use dynamic charge
+  const shippingCharge = items.length > 0 ? (subtotal >= freeDeliveryThreshold ? 0 : dynamicShippingCharge) : 0;
 
   const taxAmount =
     items.length > 0 && taxSettings?.is_enabled && !taxSettings?.include_in_price

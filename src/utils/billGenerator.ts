@@ -23,6 +23,9 @@ interface Order {
     pincode: string;
   };
   total_amount: number;
+  subtotal?: number;
+  shipping_charge?: number;
+  tax_amount?: number;
   payment_status: string;
   payment_id: string;
   order_status: string;
@@ -64,6 +67,8 @@ interface BillSettings {
   from_state?: string;
   from_pincode?: string;
   from_phone?: string;
+  free_delivery_minimum_amount?: number;
+  show_free_delivery_badge?: boolean;
 }
 
 const defaultBillSettings: BillSettings = {
@@ -93,6 +98,8 @@ const defaultBillSettings: BillSettings = {
   from_state: 'Tamil Nadu',
   from_pincode: '630211',
   from_phone: '+91 9876543210',
+  free_delivery_minimum_amount: 2000,
+  show_free_delivery_badge: true,
 };
 
 export function generateBillHTML(order: Order, siteSettings: SiteSettings, shippingCharge: number = 0, customSettings?: BillSettings): string {

@@ -1,5 +1,5 @@
 import { ArrowRight, Sparkles, Heart, Package, Star, ShoppingCart, MessageCircle, Shield } from 'lucide-react';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback, memo } from 'react';
 import { db } from '../lib/firebase';
 import { ref, get, onValue } from 'firebase/database';
 import type { Product, Category } from '../types';
@@ -246,6 +246,74 @@ export default function Home({ onNavigate, onCartClick }: HomeProps) {
             setDefaultSectionsVisibility(publishedData.default_sections_visibility);
           }
 
+          // Build allSectionsOrder by merging default and custom sections
+          const allSectionsOrderData: Array<{ id: string; type: 'default' | 'custom' | 'info' | 'video' | 'marquee'; order_index: number }> = [];
+          
+          // Add default sections with their visibility settings
+          if (publishedData.default_sections_visibility) {
+            const defaultVisibility = publishedData.default_sections_visibility;
+            const defaultSectionKeys = ['banner_social', 'feature_boxes', 'all_categories', 'best_sellers', 'might_you_like', 'shop_by_category', 'customer_reviews', 'marquee'];
+            
+            defaultSectionKeys.forEach((key, index) => {
+              const orderKey = `order_${key}`;
+              const order_index = defaultVisibility[orderKey] !== undefined ? defaultVisibility[orderKey] : index;
+              allSectionsOrderData.push({
+                id: key,
+                type: 'default',
+                order_index
+              });
+            });
+          }
+          
+          // Add custom sections
+          if (publishedData.homepage_sections) {
+            Object.entries(publishedData.homepage_sections).forEach(([id, sectionData]: [string, any]) => {
+              if (sectionData.is_visible) {
+                allSectionsOrderData.push({
+                  id,
+                  type: 'custom',
+                  order_index: sectionData.order_index || 100
+                });
+              }
+            });
+          }
+          
+          // Add info sections
+          if (publishedData.info_sections) {
+            Object.entries(publishedData.info_sections).forEach(([id, sectionData]: [string, any]) => {
+              if (sectionData.is_visible) {
+                allSectionsOrderData.push({
+                  id,
+                  type: 'info',
+                  order_index: sectionData.order_index || 100
+                });
+              }
+            });
+          }
+          
+          // Add video sections
+          if (publishedData.video_section_settings?.is_visible) {
+            allSectionsOrderData.push({
+              id: 'video_section',
+              type: 'video',
+              order_index: publishedData.video_section_settings.order_index || 7
+            });
+          }
+          
+          // Add marquee sections
+          if (publishedData.marquee_sections) {
+            Object.entries(publishedData.marquee_sections).forEach(([id, sectionData]: [string, any]) => {
+              if (sectionData.is_visible) {
+                allSectionsOrderData.push({
+                  id,
+                  type: 'marquee',
+                  order_index: sectionData.order_index || 100
+                });
+              }
+            });
+          }
+          
+          // Use explicit order if available, otherwise use constructed order
           if (publishedData.all_sections_order) {
             const orderArray = Object.entries(publishedData.all_sections_order).map(([id, data]: [string, any]) => ({
               id,
@@ -253,6 +321,10 @@ export default function Home({ onNavigate, onCartClick }: HomeProps) {
             }));
             orderArray.sort((a, b) => a.order_index - b.order_index);
             setAllSectionsOrder(orderArray);
+          } else {
+            // Sort by order_index and set
+            allSectionsOrderData.sort((a, b) => a.order_index - b.order_index);
+            setAllSectionsOrder(allSectionsOrderData);
           }
         }
       } catch (error) {
@@ -335,59 +407,66 @@ export default function Home({ onNavigate, onCartClick }: HomeProps) {
   return (
     <div className="min-h-screen bg-white">
       {carouselSettings.is_visible && carouselImages.length > 0 && (
-        <section className="relative h-[400px] sm:h-[500px] lg:h-[600px] w-full overflow-hidden group">
-          {carouselImages.map((image, index) => (
-            <div
-              key={index}
-              className={`absolute inset-0 transition-all duration-1000 ease-in-out transform ${
-                index === currentSlide ? 'opacity-100 scale-100' : 'opacity-0 scale-110 pointer-events-none'
-              }`}
-            >
-              <div className="absolute inset-0 bg-black/10 z-10"></div>
-              <img
-                src={image}
-                alt={`Slide ${index + 1}`}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          ))}
-
-          {carouselSettings.show_navigation && carouselImages.length > 1 && (
-            <>
-              <button
-                onClick={prevSlide}
-                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/40 transition-all opacity-0 group-hover:opacity-100 transform -translate-x-4 group-hover:translate-x-0"
+        <section className="relative w-full overflow-hidden group bg-gray-100">
+          {/* Responsive height: mobile first */}
+          <div className="relative h-48 sm:h-80 md:h-96 lg:h-[600px] w-full">
+            {carouselImages.map((image, index) => (
+              <div
+                key={index}
+                className={`absolute inset-0 transition-all duration-1000 ease-in-out transform ${
+                  index === currentSlide ? 'opacity-100 scale-100' : 'opacity-0 scale-110 pointer-events-none'
+                }`}
               >
-                <ArrowRight className="w-6 h-6 rotate-180" />
-              </button>
-              <button
-                onClick={nextSlide}
-                className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/40 transition-all opacity-0 group-hover:opacity-100 transform translate-x-4 group-hover:translate-x-0"
-              >
-                <ArrowRight className="w-6 h-6" />
-              </button>
-            </>
-          )}
-
-          {carouselSettings.show_indicators && carouselImages.length > 1 && (
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-3">
-              {carouselImages.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentSlide(index)}
-                  className={`h-1.5 transition-all duration-300 rounded-full ${
-                    index === currentSlide ? 'w-8 bg-white' : 'w-2 bg-white/50 hover:bg-white/80'
-                  }`}
+                <img
+                  src={image}
+                  alt={`Slide ${index + 1}`}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
                 />
-              ))}
-            </div>
-          )}
+              </div>
+            ))}
+
+            {carouselSettings.show_navigation && carouselImages.length > 1 && (
+              <>
+                <button
+                  onClick={prevSlide}
+                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-20 p-2 sm:p-3 rounded-full bg-white/30 backdrop-blur-md text-white hover:bg-white/50 transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transform -translate-x-4 sm:group-hover:translate-x-0"
+                  aria-label="Previous slide"
+                >
+                  <ArrowRight className="w-4 sm:w-6 h-4 sm:h-6 rotate-180" />
+                </button>
+                <button
+                  onClick={nextSlide}
+                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-20 p-2 sm:p-3 rounded-full bg-white/30 backdrop-blur-md text-white hover:bg-white/50 transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transform translate-x-4 sm:group-hover:translate-x-0"
+                  aria-label="Next slide"
+                >
+                  <ArrowRight className="w-4 sm:w-6 h-4 sm:h-6" />
+                </button>
+              </>
+            )}
+
+            {carouselSettings.show_indicators && carouselImages.length > 1 && (
+              <div className="absolute bottom-3 sm:bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-2 sm:gap-3">
+                {carouselImages.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentSlide(index)}
+                    className={`h-1 sm:h-1.5 transition-all duration-300 rounded-full ${
+                      index === currentSlide ? 'w-6 sm:w-8 bg-white' : 'w-1.5 sm:w-2 bg-white/50 hover:bg-white/80'
+                    }`}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </section>
       )}
 
       {allSectionsOrder.map((section) => (
         <section key={section.id} className="w-full">
-          {section.id === 'all_categories' && defaultSectionsVisibility.all_categories && categories.length > 0 && (
+          {section.id === 'all_categories' && (defaultSectionsVisibility.all_categories !== false) && categories.length > 0 && (
             <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-white">
               <div className="max-w-7xl mx-auto">
                 <div className="text-center mb-8 sm:mb-12">
@@ -428,7 +507,7 @@ export default function Home({ onNavigate, onCartClick }: HomeProps) {
             </section>
           )}
 
-          {section.id === 'best_sellers' && defaultSectionsVisibility.best_sellers && (
+          {section.id === 'best_sellers' && (defaultSectionsVisibility.best_sellers !== false) && (
             <section className="relative py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-amber-50 to-orange-50">
               <div className="max-w-7xl mx-auto text-center">
                 <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
@@ -440,7 +519,7 @@ export default function Home({ onNavigate, onCartClick }: HomeProps) {
             </section>
           )}
 
-          {section.id === 'might_you_like' && defaultSectionsVisibility.might_you_like && (
+          {section.id === 'might_you_like' && (defaultSectionsVisibility.might_you_like !== false) && (
             <MightYouLike
               onProductClick={(product) => {
                 setSelectedProduct(product);
@@ -450,7 +529,7 @@ export default function Home({ onNavigate, onCartClick }: HomeProps) {
             />
           )}
 
-          {section.id === 'shop_by_category' && defaultSectionsVisibility.shop_by_category && (
+          {section.id === 'shop_by_category' && (defaultSectionsVisibility.shop_by_category !== false) && (
             <section className="relative py-12 sm:py-16 lg:py-20 bg-white">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-8 sm:mb-12">
@@ -478,7 +557,7 @@ export default function Home({ onNavigate, onCartClick }: HomeProps) {
             </section>
           )}
 
-          {section.id === 'customer_reviews' && defaultSectionsVisibility.customer_reviews && <CustomerReviews />}
+          {section.id === 'customer_reviews' && (defaultSectionsVisibility.customer_reviews !== false) && <CustomerReviews />}
 
           {section.type === 'custom' && dynamicSections.find(s => s.id === section.id) && (
             <div className="bg-white">

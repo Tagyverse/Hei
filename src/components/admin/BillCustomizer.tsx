@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { FileText, Save, Eye, Upload, X, Type, Palette, Layout, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { FileText, Save, Eye, Upload, X, Type, Palette, Layout, Image as ImageIcon, Loader2, Truck } from 'lucide-react';
 import { db } from '../../lib/firebase';
-import { ref, get, set } from 'firebase/database';
+import { ref, get, set, update } from 'firebase/database';
 import R2ImageSelectorDialog from './R2ImageSelectorDialog';
 
 interface BillSettings {
@@ -76,6 +76,10 @@ const defaultSettings: BillSettings = {
   from_state: 'Tamil Nadu',
   from_pincode: '630211',
   from_phone: '+91 9876543210',
+  
+  // Shipping settings
+  free_delivery_minimum_amount: 2000,
+  show_free_delivery_badge: true,
 };
 
 const fontOptions = [
@@ -123,14 +127,49 @@ export default function BillCustomizer() {
   };
 
   const saveSettings = async () => {
+    // Verify admin authentication
+    const isAuthenticated = localStorage.getItem('adminAuthenticated') === 'true';
+    if (!isAuthenticated) {
+      alert('You are not authorized to edit settings. Please login as admin first.');
+      return;
+    }
+
     setSaving(true);
     try {
       const settingsRef = ref(db, 'bill_settings');
-      await set(settingsRef, settings);
+      
+      // Build update object with all fields and timestamps
+      const updateData: Record<string, any> = {};
+      Object.entries(settings).forEach(([key, value]) => {
+        updateData[key] = value;
+      });
+      
+      // Add timestamp and auth metadata for tracking
+      updateData['updated_at'] = new Date().toISOString();
+      updateData['updated_by'] = 'admin';
+      
+      console.log('[BILL_SETTINGS] Authenticated save:', Object.keys(updateData));
+      
+      // Use update instead of set for better compatibility with Firebase rules
+      await update(settingsRef, updateData);
+      
+      console.log('[BILL_SETTINGS] Saved successfully');
       alert('Bill settings saved successfully!');
-    } catch (error) {
-      console.error('Error saving bill settings:', error);
-      alert('Failed to save settings');
+    } catch (error: any) {
+      console.error('[BILL_SETTINGS] Error:', error);
+      const errorMsg = error.message || error.code || 'Failed to save settings';
+      
+      // Log detailed error information
+      console.error('[BILL_SETTINGS] Error code:', error.code);
+      console.error('[BILL_SETTINGS] Error details:', error);
+      
+      if (errorMsg.includes('permission') || errorMsg.includes('PERMISSION_DENIED')) {
+        alert('Permission denied. Please ensure you are logged in as an authorized admin.');
+      } else if (errorMsg.includes('validation') || errorMsg.includes('valid')) {
+        alert('Validation error: ' + errorMsg);
+      } else {
+        alert('Failed to save settings: ' + errorMsg);
+      }
     } finally {
       setSaving(false);
     }
@@ -455,6 +494,40 @@ export default function BillCustomizer() {
                   <span className="text-sm text-gray-700">Show cut line separator</span>
                 </label>
               </div>
+            </div>
+          </div>
+
+          {/* Shipping Settings */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Truck className="w-5 h-5 text-teal-600" />
+              Shipping Settings
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Free Delivery Minimum Amount (₹)
+                </label>
+                <input
+                  type="number"
+                  value={settings.free_delivery_minimum_amount || 2000}
+                  onChange={(e) => handleChange('free_delivery_minimum_amount', parseInt(e.target.value))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  placeholder="Enter minimum amount for free delivery"
+                />
+                <p className="text-xs text-gray-500 mt-1">Orders above this amount will get free delivery</p>
+              </div>
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.show_free_delivery_badge || false}
+                  onChange={(e) => handleChange('show_free_delivery_badge', e.target.checked)}
+                  className="w-5 h-5 rounded border-gray-300 text-teal-500 focus:ring-teal-500"
+                />
+                <span className="text-sm text-gray-700">Show 'FREE DELIVERY' badge on qualifying orders</span>
+              </label>
             </div>
           </div>
 

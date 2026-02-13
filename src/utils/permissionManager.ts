@@ -12,18 +12,86 @@ interface PermissionStatus {
 export type PermissionType = 'camera' | 'microphone' | 'notification' | 'geolocation';
 
 /**
- * Request camera permission
+ * Check camera permission status before requesting
  */
-export async function requestCameraPermission(): Promise<boolean> {
+export async function checkCameraPermissionStatus(): Promise<'granted' | 'denied' | 'prompt' | 'unknown'> {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    if ('permissions' in navigator) {
+      const permission = await navigator.permissions.query({ name: 'camera' as PermissionName });
+      return permission.state as 'granted' | 'denied' | 'prompt';
+    }
+  } catch (error) {
+    console.warn('[PERMISSION] Cannot check camera status:', error);
+  }
+  return 'unknown';
+}
+
+/**
+ * Request camera permission with proper pre-flight checks
+ */
+export async function requestCameraPermission(): Promise<{
+  granted: boolean;
+  error?: string;
+}> {
+  try {
+    // Check if camera API is available
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      return {
+        granted: false,
+        error: 'Camera API not supported on this browser. Please use Chrome, Firefox, Safari, or Edge.'
+      };
+    }
+
+    // Check current permission status
+    const status = await checkCameraPermissionStatus();
+    
+    if (status === 'denied') {
+      return {
+        granted: false,
+        error: 'Camera permission was denied. Please enable it in your browser settings:\n\n' +
+               '1. Click the camera icon or lock icon in the address bar\n' +
+               '2. Find "Camera" and set to "Allow"\n' +
+               '3. Refresh the page and try again'
+      };
+    }
+
+    // Request camera access
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+      video: {
+        width: { ideal: 1280, min: 640 },
+        height: { ideal: 720, min: 480 }
+      },
+      audio: false
+    });
+    
     // Stop the stream after getting permission
     stream.getTracks().forEach(track => track.stop());
     console.log('[PERMISSION] Camera permission granted');
-    return true;
-  } catch (error) {
-    console.error('[PERMISSION] Camera permission denied:', error);
-    return false;
+    
+    return {
+      granted: true
+    };
+  } catch (error: any) {
+    console.error('[PERMISSION] Camera permission error:', error);
+    
+    let errorMessage = 'Camera access failed';
+    
+    if (error.name === 'NotAllowedError') {
+      errorMessage = 'Camera permission was denied. Please enable it in your browser settings.';
+    } else if (error.name === 'NotFoundError') {
+      errorMessage = 'No camera device found on this device.';
+    } else if (error.name === 'NotReadableError') {
+      errorMessage = 'Camera is being used by another application. Please close it and try again.';
+    } else if (error.name === 'OverconstrainedError') {
+      errorMessage = 'Camera does not support the requested specifications.';
+    } else if (error.name === 'TypeError') {
+      errorMessage = 'Camera permission request was cancelled.';
+    }
+    
+    return {
+      granted: false,
+      error: errorMessage
+    };
   }
 }
 

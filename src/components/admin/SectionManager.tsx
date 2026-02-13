@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Plus, Edit2, Trash2, Save, X, Eye, EyeOff, ChevronUp, ChevronDown, Loader2, Lock } from 'lucide-react';
 import { HomepageSection, Product, Category } from '../../types';
 import { db } from '../../lib/firebase';
@@ -56,6 +56,9 @@ export default function SectionManager() {
     text_color: '#ffffff',
     is_visible: true
   });
+
+  const [draggedSection, setDraggedSection] = useState<ExtendedSection | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<number | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -318,7 +321,75 @@ export default function SectionManager() {
     }
   };
 
-  const resetForm = () => {
+  const handleDragStart = useCallback((section: ExtendedSection) => {
+    setDraggedSection(section);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDropIndicator(targetIndex);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDropIndicator(null);
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent, targetSection: ExtendedSection) => {
+    e.preventDefault();
+    setDropIndicator(null);
+    
+    if (!draggedSection || draggedSection.id === targetSection.id) {
+      setDraggedSection(null);
+      return;
+    }
+
+    try {
+      const draggedIndex = draggedSection.order_index;
+      const targetIndex = targetSection.order_index;
+      
+      if (draggedIndex === targetIndex) {
+        setDraggedSection(null);
+        return;
+      }
+
+      const updates: Record<string, any> = {};
+
+      if (draggedSection.is_default && draggedSection.default_key) {
+        if (draggedSection.default_key === 'video_section') {
+          updates['video_section_settings/order_index'] = targetIndex;
+        } else {
+          updates[`default_sections_visibility/order_${draggedSection.default_key}`] = targetIndex;
+        }
+      } else {
+        const sectionType = (draggedSection as any)?.type;
+        const sectionPath = sectionType === 'marquee' ? 'marquee_sections' : 'homepage_sections';
+        updates[`${sectionPath}/${draggedSection.id}/order_index`] = targetIndex;
+      }
+
+      if (targetSection.is_default && targetSection.default_key) {
+        if (targetSection.default_key === 'video_section') {
+          updates['video_section_settings/order_index'] = draggedIndex;
+        } else {
+          updates[`default_sections_visibility/order_${targetSection.default_key}`] = draggedIndex;
+        }
+      } else {
+        const targetSectionType = (targetSection as any)?.type;
+        const targetSectionPath = targetSectionType === 'marquee' ? 'marquee_sections' : 'homepage_sections';
+        updates[`${targetSectionPath}/${targetSection.id}/order_index`] = draggedIndex;
+      }
+
+      await update(ref(db), updates);
+      await fetchData();
+    } catch (error) {
+      console.error('Error reordering section via drag-drop:', error);
+      alert('Failed to reorder section');
+    } finally {
+      setDraggedSection(null);
+    }
+  }, [draggedSection]);
+
+  const resetForm = useCallback(() => {
     setFormData({
       title: '',
       subtitle: '',
@@ -330,7 +401,7 @@ export default function SectionManager() {
     });
     setEditingSection(null);
     setShowForm(false);
-  };
+  }, []);
 
   const handleInfoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -877,17 +948,32 @@ export default function SectionManager() {
             <p className="text-gray-500">No sections created yet. Add your first section to get started.</p>
           </div>
         ) : (
-          sections.map((section) => (
+          sections.map((section, index) => (
             <div
               key={section.id}
-              className={`bg-white rounded-xl p-6 border-2 ${
-                section.is_visible ? 'border-teal-200' : 'border-gray-200 opacity-60'
+              draggable
+              onDragStart={() => handleDragStart(section)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, section)}
+              className={`bg-white rounded-xl p-6 border-2 transition-all cursor-move ${
+                draggedSection?.id === section.id 
+                  ? 'opacity-50 border-blue-500' 
+                  : dropIndicator === index
+                  ? 'border-green-500 bg-green-50'
+                  : section.is_visible 
+                  ? 'border-teal-200' 
+                  : 'border-gray-200 opacity-60'
               }`}
             >
               <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-bold text-gray-900">{section.title}</h3>
+                <div className="flex items-start gap-3 flex-1">
+                  <div className="text-gray-400 cursor-grab active:cursor-grabbing mt-1 text-xl">
+                    ⋮⋮
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-xl font-bold text-gray-900">{section.title}</h3>
                     {section.is_default && (
                       <span className="px-2 py-1 bg-blue-500 text-white text-xs font-bold rounded flex items-center gap-1">
                         <Lock className="w-3 h-3" />
@@ -988,6 +1074,7 @@ export default function SectionManager() {
                       </button>
                     </>
                   )}
+                  </div>
                 </div>
               </div>
             </div>

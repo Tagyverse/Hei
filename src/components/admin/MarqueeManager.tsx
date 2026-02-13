@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Save, Eye, EyeOff } from 'lucide-react';
 import { db } from '../../lib/firebase';
-import { ref, get, set } from 'firebase/database';
+import { ref, get, set, update } from 'firebase/database';
 
 export default function MarqueeManager() {
   const [marqueeData, setMarqueeData] = useState({
@@ -40,7 +40,7 @@ export default function MarqueeManager() {
 
     try {
       const marqueeRef = ref(db, 'site_content/top_banner');
-      await set(marqueeRef, {
+      await update(marqueeRef, {
         value: marqueeData,
         updated_at: new Date().toISOString()
       });

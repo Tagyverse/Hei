@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ref, set, get } from 'firebase/database';
+import { ref, set, get, update } from 'firebase/database';
+import { requireAdminAuth } from '../../utils/adminAuth';
 import { db } from '../../lib/firebase';
 import { Info, Save } from 'lucide-react';
 
@@ -43,14 +44,19 @@ export default function TaxManager() {
   };
 
   const handleSave = async () => {
+    if (!requireAdminAuth('update tax settings')) {
+      return;
+    }
+
     try {
       setSaving(true);
       setMessage('');
 
       const settingsRef = ref(db, 'tax_settings');
-      await set(settingsRef, {
+      await update(settingsRef, {
         ...settings,
         updated_at: new Date().toISOString(),
+        updated_by: 'admin'
       });
 
       setMessage('Tax settings saved successfully!');

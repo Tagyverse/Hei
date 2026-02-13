@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Save, Eye, EyeOff, Sparkles, Mail, Phone, MapPin, Facebook, Instagram, Twitter, Linkedin, Youtube } from 'lucide-react';
 import { db } from '../../lib/firebase';
-import { ref, get, set } from 'firebase/database';
+import { ref, get, set, update } from 'firebase/database';
 
 interface FooterConfig {
   is_visible: boolean;
@@ -277,7 +277,8 @@ export default function FooterManager() {
           youtube: '',
         },
       };
-      await set(footerRef, dataToSave);
+      // Use update() instead of set() for better Firebase rule compatibility
+      await update(footerRef, dataToSave);
       alert('Footer settings saved successfully!');
     } catch (error: any) {
       console.error('Error saving footer config:', error);

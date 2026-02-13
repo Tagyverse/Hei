@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Save, FileText } from 'lucide-react';
 import { db } from '../../lib/firebase';
-import { ref, get, set } from 'firebase/database';
+import { ref, get, set, update } from 'firebase/database';
 
 interface Policy {
   key: string;
@@ -213,7 +213,7 @@ By continuing to use our website, you agree to follow these terms.`,
         };
       });
 
-      await set(ref(db, 'policies'), policiesData);
+      await update(ref(db, 'policies'), policiesData);
       alert('Policies saved successfully!');
     } catch (error) {
       console.error('Error saving policies:', error);

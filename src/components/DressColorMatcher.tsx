@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { X, Upload, Sparkles, CheckCircle, AlertCircle, Camera, Image as ImageIcon, ArrowLeft, RefreshCcw, ShieldCheck, Palette } from 'lucide-react';
 import { usePublishedData } from '../contexts/PublishedDataContext';
 import { objectToArray } from '../utils/publishedData';
@@ -101,23 +101,40 @@ export default function DressColorMatcher({ isOpen, onClose, currentProduct }: D
     setCameraError(null);
     setIsProcessing(true);
     
-    const granted = await requestCameraPermission();
-    if (granted) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
-        });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          setStep('camera');
+    try {
+      const result = await requestCameraPermission();
+      
+      if (result.granted) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
+          });
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            setStep('camera');
+          }
+        } catch (err: any) {
+          console.error('Error accessing camera:', err);
+          let errorMsg = 'Could not access camera. ';
+          
+          if (err.name === 'NotReadableError') {
+            errorMsg += 'Camera may be in use by another app. Please close it and try again.';
+          } else if (err.name === 'OverconstrainedError') {
+            errorMsg += 'Camera does not support required settings. Try a different camera.';
+          } else {
+            errorMsg += 'Please check your camera and permissions.';
+          }
+          
+          setCameraError(errorMsg);
         }
-      } catch (err) {
-        console.error('Error accessing camera:', err);
-        setCameraError('Could not access camera. Please check permissions.');
+      } else {
+        setCameraError(result.error || 'Camera permission denied.');
       }
-    } else {
-      setCameraError('Camera permission denied. Please enable it in your browser settings.');
+    } catch (err) {
+      console.error('Error in startCamera:', err);
+      setCameraError('An unexpected error occurred. Please try again.');
     }
+    
     setIsProcessing(false);
   };
 
@@ -168,7 +185,7 @@ export default function DressColorMatcher({ isOpen, onClose, currentProduct }: D
     img.src = imageUrl;
   };
 
-  const extractColorsFromImage = (imageElement: HTMLImageElement): ColorInfo[] => {
+  const extractColorsFromImage = useCallback((imageElement: HTMLImageElement): ColorInfo[] => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) return [];
@@ -177,20 +194,23 @@ export default function DressColorMatcher({ isOpen, onClose, currentProduct }: D
     canvas.height = imageElement.height;
     ctx.drawImage(imageElement, 0, 0);
 
+    // Focus on center area but with larger focus zone
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
-    const focusWidth = Math.floor(canvas.width * 0.7);
-    const focusHeight = Math.floor(canvas.height * 0.7);
+    const focusWidth = Math.floor(canvas.width * 0.8);  // Increased from 0.7 to 0.8
+    const focusHeight = Math.floor(canvas.height * 0.8); // Increased from 0.7 to 0.8
     const startX = Math.floor(centerX - focusWidth / 2);
     const startY = Math.floor(centerY - focusHeight / 2);
 
     const imageData = ctx.getImageData(startX, startY, focusWidth, focusHeight);
     const pixels = imageData.data;
     const colorCounts: { [key: string]: number } = {};
+    const pixelColors: Array<{ r: number; g: number; b: number; hex: string }> = [];
     let validPixelCount = 0;
 
-    const edgeThreshold = 20;
+    const edgeThreshold = 30; // Increased from 20 to exclude more background
 
+    // First pass: collect valid pixels
     for (let i = 0; i < pixels.length; i += 4) {
       const r = pixels[i];
       const g = pixels[i + 1];
@@ -203,19 +223,23 @@ export default function DressColorMatcher({ isOpen, onClose, currentProduct }: D
       const x = pixelIndex % focusWidth;
       const y = Math.floor(pixelIndex / focusWidth);
 
+      // Exclude edges to avoid background
       if (x < edgeThreshold || x > focusWidth - edgeThreshold ||
           y < edgeThreshold || y > focusHeight - edgeThreshold) {
         continue;
       }
 
       const brightness = (r + g + b) / 3;
-      if (brightness > 235 || brightness < 20) continue;
+      
+      // Filter out very bright (near white) and very dark (near black) pixels
+      if (brightness > 240 || brightness < 15) continue;
 
       const max = Math.max(r, g, b);
       const min = Math.min(r, g, b);
       const saturation = max === 0 ? 0 : (max - min) / max;
 
-      if (saturation < 0.15) continue;
+      // Increased saturation threshold from 0.15 to 0.25 to focus on saturated colors (dress colors)
+      if (saturation < 0.25) continue;
 
       const roundedR = Math.round(r / 10) * 10;
       const roundedG = Math.round(g / 10) * 10;
@@ -223,10 +247,31 @@ export default function DressColorMatcher({ isOpen, onClose, currentProduct }: D
       const hex = `#${((1 << 24) + (roundedR << 16) + (roundedG << 8) + roundedB).toString(16).slice(1).toUpperCase()}`;
 
       colorCounts[hex] = (colorCounts[hex] || 0) + 1;
+      pixelColors.push({ r: roundedR, g: roundedG, b: roundedB, hex });
       validPixelCount++;
     }
 
-    const sortedColors = Object.entries(colorCounts)
+    // Filter out uniform background colors by analyzing color distribution
+    const filteredColorCounts: { [key: string]: number } = {};
+    
+    for (const [hex, count] of Object.entries(colorCounts)) {
+      const percentage = (count / validPixelCount) * 100;
+      
+      // Very dominant single colors are likely background
+      if (percentage > 40) continue;
+      
+      // Keep colors that appear meaningfully (at least 1% of pixels)
+      if (percentage >= 1) {
+        filteredColorCounts[hex] = count;
+      }
+    }
+
+    // If filtering removed all colors, fall back to original with higher threshold
+    const finalColorCounts = Object.keys(filteredColorCounts).length > 0 
+      ? filteredColorCounts 
+      : colorCounts;
+
+    const sortedColors = Object.entries(finalColorCounts)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
       .map(([hex, count]) => ({
@@ -234,12 +279,12 @@ export default function DressColorMatcher({ isOpen, onClose, currentProduct }: D
         name: getColorName(hex),
         percentage: Math.round((count / validPixelCount) * 100 * 100) / 100
       }))
-      .filter(color => color.percentage > 2);
+      .filter(color => color.percentage > 1.5); // Reduced threshold from 2 to 1.5 after filtering
 
     return sortedColors;
-  };
+  }, []);
 
-  const matchProductsByColors = async (colors: ColorInfo[]) => {
+  const matchProductsByColors = useCallback(async (colors: ColorInfo[]) => {
     if (!publishedData?.products) return;
 
     try {
@@ -282,9 +327,9 @@ export default function DressColorMatcher({ isOpen, onClose, currentProduct }: D
       console.error('Error matching products:', err);
       setError('Failed to find matching products');
     }
-  };
+  }, [publishedData, currentProduct]);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -295,7 +340,7 @@ export default function DressColorMatcher({ isOpen, onClose, currentProduct }: D
       };
       reader.readAsDataURL(file);
     }
-  };
+  }, [processImage]);
 
   if (!isOpen) return null;
 
@@ -387,9 +432,9 @@ export default function DressColorMatcher({ isOpen, onClose, currentProduct }: D
                   </div>
                   <button
                     onClick={capturePhoto}
-                    className="w-16 h-16 md:w-20 md:h-20 bg-white rounded-full border-8 border-gray-300 flex items-center justify-center hover:scale-110 transition-all active:scale-95 shadow-2xl"
+                    className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-full border-8 border-gray-300 flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-2xl touch-none"
                   >
-                    <div className="w-10 h-10 md:w-12 md:h-12 bg-pink-500 rounded-full"></div>
+                    <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-pink-500 rounded-full"></div>
                   </button>
                 </div>
                 <button

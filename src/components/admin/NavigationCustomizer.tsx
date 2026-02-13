@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Save, RotateCcw } from 'lucide-react';
 import { db, auth } from '../../lib/firebase';
-import { ref, get, set } from 'firebase/database';
+import { ref, get, set, update } from 'firebase/database';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface NavTheme {
@@ -182,7 +182,8 @@ export default function NavigationCustomizer() {
       console.log('[NAV] Saving to navigation_settings:', styleData);
       
       // Save to the correct Firebase path that matches the Rules
-      await set(ref(db, 'navigation_settings'), styleData);
+      // Use update() instead of set() for better compatibility with Firebase rules
+      await update(ref(db, 'navigation_settings'), styleData);
       console.log('[NAV] Successfully saved to navigation_settings');
 
       // Verify the save worked by reading it back

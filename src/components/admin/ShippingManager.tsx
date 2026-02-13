@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
-import { ref, get, set } from 'firebase/database';
+import { ref, get, set, update } from 'firebase/database';
 import { Save, Truck } from 'lucide-react';
+import { requireAdminAuth } from '../../utils/adminAuth';
 
 export default function ShippingManager() {
   const [shippingPrice, setShippingPrice] = useState<number>(0);
@@ -28,11 +29,15 @@ export default function ShippingManager() {
   };
 
   const handleSave = async () => {
+    if (!requireAdminAuth('update shipping price')) {
+      return;
+    }
+
     setSaving(true);
     setMessage('');
     try {
       const shippingRef = ref(db, 'settings/shipping_price');
-      await set(shippingRef, shippingPrice);
+      await update(ref(db, 'settings'), { shipping_price: shippingPrice, updated_by: 'admin' });
       setMessage('Shipping price updated successfully!');
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
