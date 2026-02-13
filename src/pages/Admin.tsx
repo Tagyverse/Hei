@@ -1617,25 +1617,28 @@ Users will now see the updated content.`;
                 R2 Gallery
               </div>
             </button>
-            <button
-              onClick={() => {
-                setActiveTab('bill-customizer');
-                setShowForm(false);
-                setShowCategoryForm(false);
-                setShowReviewForm(false);
-                setShowOfferForm(false);
-              }}
-              className={`pb-4 px-4 sm:px-6 font-bold transition-colors whitespace-nowrap text-sm sm:text-base ${
-                activeTab === 'bill-customizer'
-                  ? 'border-b-4 border-orange-500 text-orange-600'
-                  : 'text-gray-600 hover:text-orange-600'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Receipt className="w-4 h-4 sm:w-5 sm:h-5" />
-                Bill Design
-              </div>
-            </button>
+            {isAdminAuthenticated && (
+              <button
+                onClick={() => {
+                  setActiveTab('bill-customizer');
+                  setShowForm(false);
+                  setShowCategoryForm(false);
+                  setShowReviewForm(false);
+                  setShowOfferForm(false);
+                }}
+                className={`pb-4 px-4 sm:px-6 font-bold transition-colors whitespace-nowrap text-sm sm:text-base ${
+                  activeTab === 'bill-customizer'
+                    ? 'border-b-4 border-orange-500 text-orange-600'
+                    : 'text-gray-600 hover:text-orange-600'
+                }`}
+                title="Authorized admin only"
+              >
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4 sm:w-5 sm:h-5" />
+                  Bill Design
+                </div>
+              </button>
+            )}
             <button
               onClick={() => {
                 setActiveTab('settings');
