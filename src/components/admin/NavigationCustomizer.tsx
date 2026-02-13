@@ -163,6 +163,10 @@ export default function NavigationCustomizer() {
         return;
       }
 
+      // Get fresh auth token to ensure valid credentials
+      const idToken = await user.getIdToken();
+      console.log('[NAV] User authenticated, ID token obtained:', user.uid);
+
       const styleData = {
         background: navBgColor,
         text: navTextColor,
@@ -171,24 +175,45 @@ export default function NavigationCustomizer() {
         borderRadius: borderRadius,
         buttonSize: buttonSize,
         themeMode: themeMode,
-        buttonLabels: buttonLabels
+        buttonLabels: buttonLabels,
+        savedAt: new Date().toISOString()
       };
 
       console.log('[NAV] Saving to navigation_settings:', styleData);
       
-      // Save to Firebase
+      // Save to the correct Firebase path that matches the Rules
       await set(ref(db, 'navigation_settings'), styleData);
-      
-      // Save to localStorage for instant persistence (no reload needed)
-      localStorage.setItem('navigation_settings', JSON.stringify(styleData));
-      console.log('[NAV] Successfully saved to Firebase and localStorage');
+      console.log('[NAV] Successfully saved to navigation_settings');
 
-      alert('Navigation settings saved successfully!');
-      // NO RELOAD - data already saved to localStorage and component state
+      // Verify the save worked by reading it back
+      const verifySnapshot = await get(ref(db, 'navigation_settings'));
+      if (verifySnapshot.exists()) {
+        console.log('[NAV] Verification SUCCESS: Data was saved and can be read back:', verifySnapshot.val());
+        alert('Navigation settings saved successfully! Remember to click "Publish to Live" to update the live site.');
+      } else {
+        console.log('[NAV] Verification FAILED: Data was not saved or cannot be read back');
+        alert('Navigation settings saved, but verification failed. Please check browser console.');
+      }
+      
+      // Reload to verify persistence
+      setTimeout(() => {
+        loadNavigation();
+      }, 500);
     } catch (error) {
       console.error('[NAV] Error saving navigation:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      alert('Failed to save navigation settings: ' + errorMsg);
+      console.error('[NAV] Current user:', user);
+      console.error('[NAV] Error details:', error);
+      
+      if (errorMsg.includes('Permission denied') || errorMsg.includes('PERMISSION_DENIED')) {
+        const debugMsg = user ? `User ${user.uid} doesn't have write permission to navigation_settings` : 'User is not authenticated';
+        console.error('[NAV] Permission error details:', debugMsg);
+        alert(`Failed to save: Firebase permissions issue.\n\n${debugMsg}\n\nMake sure you are signed in with the correct admin account.`);
+      } else if (errorMsg.includes('Network')) {
+        alert('Network error: Please check your connection and try again.');
+      } else {
+        alert('Failed to save navigation settings.\n\nError: ' + errorMsg + '\n\nPlease check the browser console for more details.');
+      }
     } finally {
       setSaving(false);
     }

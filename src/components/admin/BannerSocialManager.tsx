@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import { Save, X, Plus, Trash2, Eye, EyeOff, Loader2, Link as LinkIcon, Instagram, Facebook, Twitter, Mail, MessageCircle, Linkedin, Youtube, AtSign, Sparkles } from 'lucide-react';
 import { db } from '../../lib/firebase';
@@ -33,13 +31,8 @@ export default function BannerSocialManager() {
     title: 'Welcome to Pixie Blooms!',
     subtitle: 'Discover our exclusive collection of handcrafted hair accessories',
     isVisible: true,
-    bg_color: '#ffffff',
-    text_color: '#000000'
-  });
-
-  const [socialSettings, setSocialSettings] = useState({
-    bg_color: '#f5f5f5',
-    text_color: '#000000'
+    backgroundColor: '#14b8a6', // Default teal-500
+    textColor: '#ffffff'
   });
 
   const [socialLinksVisible, setSocialLinksVisible] = useState(true);
@@ -317,16 +310,16 @@ export default function BannerSocialManager() {
               <div className="flex gap-2">
                 <input
                   type="color"
-                  value={bannerData.bg_color}
-                  onChange={(e) => setBannerData({ ...bannerData, bg_color: e.target.value })}
-                  className="w-16 h-10 border-2 border-gray-300 rounded-lg cursor-pointer"
+                  value={bannerData.backgroundColor || '#14b8a6'}
+                  onChange={(e) => setBannerData({ ...bannerData, backgroundColor: e.target.value })}
+                  className="h-10 w-20 rounded border border-gray-300 cursor-pointer"
                 />
                 <input
                   type="text"
-                  value={bannerData.bg_color}
-                  onChange={(e) => setBannerData({ ...bannerData, bg_color: e.target.value })}
-                  className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-teal-500 focus:outline-none text-sm"
-                  placeholder="#ffffff"
+                  value={bannerData.backgroundColor || '#14b8a6'}
+                  onChange={(e) => setBannerData({ ...bannerData, backgroundColor: e.target.value })}
+                  className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-teal-500 focus:outline-none"
+                  placeholder="#14b8a6"
                 />
               </div>
             </div>
@@ -338,28 +331,25 @@ export default function BannerSocialManager() {
               <div className="flex gap-2">
                 <input
                   type="color"
-                  value={bannerData.text_color}
-                  onChange={(e) => setBannerData({ ...bannerData, text_color: e.target.value })}
-                  className="w-16 h-10 border-2 border-gray-300 rounded-lg cursor-pointer"
+                  value={bannerData.textColor || '#ffffff'}
+                  onChange={(e) => setBannerData({ ...bannerData, textColor: e.target.value })}
+                  className="h-10 w-20 rounded border border-gray-300 cursor-pointer"
                 />
                 <input
                   type="text"
-                  value={bannerData.text_color}
-                  onChange={(e) => setBannerData({ ...bannerData, text_color: e.target.value })}
-                  className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-teal-500 focus:outline-none text-sm"
-                  placeholder="#000000"
+                  value={bannerData.textColor || '#ffffff'}
+                  onChange={(e) => setBannerData({ ...bannerData, textColor: e.target.value })}
+                  className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-teal-500 focus:outline-none"
+                  placeholder="#ffffff"
                 />
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg p-4 border-2 border-gray-200" style={{ backgroundColor: bannerData.bg_color }}>
-            <p className="text-xs font-bold text-gray-500 mb-2">Preview:</p>
-            <p className="text-sm font-bold" style={{ color: bannerData.text_color }}>
-              {bannerData.title}
-            </p>
-            <p className="text-xs" style={{ color: bannerData.text_color, opacity: 0.95 }}>
-              {bannerData.subtitle}
+          <div className="bg-gradient-to-r from-pink-50 via-purple-50 to-teal-50 border-2 border-teal-100 rounded-lg p-4">
+            <p className="text-sm font-bold text-gray-700 mb-2">Preview:</p>
+            <p className="text-sm text-gray-600 font-medium">
+              {bannerData.title} - {bannerData.subtitle}
             </p>
           </div>
 

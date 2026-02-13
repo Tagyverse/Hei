@@ -137,7 +137,7 @@ export default function WhatsAppFAB() {
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center p-1.5 border-2 border-white">
                     <img
-                      src="/logo.png"
+                      src="https://res.cloudinary.com/ds7pknmvg/image/upload/v1770820147/logo-pixieblooms_e09fgp.png"
                       alt="Store"
                       className="w-full h-full object-contain"
                     />
@@ -167,7 +167,7 @@ export default function WhatsAppFAB() {
                     {msg.sender === 'bot' && (
                       <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center flex-shrink-0 mr-2 border border-gray-200 p-1">
                         <img
-                          src="/logo.png"
+                          src="https://res.cloudinary.com/ds7pknmvg/image/upload/v1770820147/logo-pixieblooms_e09fgp.png"
                           alt="Store"
                           className="w-full h-full object-contain"
                         />
@@ -200,7 +200,7 @@ export default function WhatsAppFAB() {
                   <div className="flex justify-start animate-fade-in">
                     <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center flex-shrink-0 mr-2 border border-gray-200 p-1">
                       <img
-                        src="/logo.png"
+                        src="https://res.cloudinary.com/ds7pknmvg/image/upload/v1770820147/logo-pixieblooms_e09fgp.png"
                         alt="Store"
                         className="w-full h-full object-contain"
                       />

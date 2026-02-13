@@ -1,10 +1,5 @@
-'use client';
-
-import React from "react"
-import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useState } from 'react';
-import { useModalScroll } from '../hooks/useModalScroll';
 
 interface EnquiryModalProps {
   isOpen: boolean;
@@ -17,8 +12,6 @@ export default function EnquiryModal({ isOpen, onClose }: EnquiryModalProps) {
     phone: '',
     message: ''
   });
-
-  useModalScroll(isOpen);
 
   if (!isOpen) return null;
 
@@ -35,12 +28,12 @@ export default function EnquiryModal({ isOpen, onClose }: EnquiryModalProps) {
     onClose();
   };
 
-  const modalContent = (
-    <div className="fixed inset-0 z-[9999]">
+  return (
+    <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl max-w-md mx-auto w-full border-t-4 border-black animate-slide-up h-[90dvh] sm:h-auto overflow-hidden flex flex-col">
-        <div className="bg-[#B5E5CF] p-4 sm:p-6 relative border-b-4 border-black rounded-t-3xl flex-shrink-0">
+      <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl max-w-md mx-auto w-full border-t-4 border-black animate-slide-up">
+        <div className="bg-[#B5E5CF] p-6 relative border-b-4 border-black rounded-t-3xl">
           <div className="w-12 h-1.5 bg-black rounded-full mx-auto mb-4"></div>
           <button
             onClick={onClose}
@@ -50,10 +43,10 @@ export default function EnquiryModal({ isOpen, onClose }: EnquiryModalProps) {
           </button>
 
           <h2 className="text-2xl font-bold text-black mb-2">Send Enquiry</h2>
-          <p className="text-black mb-4 font-medium">{"Fill in your details and we'll get back to you on WhatsApp"}</p>
+          <p className="text-black mb-4 font-medium">Fill in your details and we'll get back to you on WhatsApp</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 p-4 sm:p-6 bg-white flex-1 overflow-y-auto" style={{ overscrollBehavior: 'contain' }}>
+        <form onSubmit={handleSubmit} className="space-y-4 p-6 bg-white">
           <div>
             <label htmlFor="name" className="block text-sm font-bold text-black mb-1">
               Your Name *
@@ -112,6 +105,4 @@ export default function EnquiryModal({ isOpen, onClose }: EnquiryModalProps) {
       </div>
     </div>
   );
-
-  return createPortal(modalContent, document.body);
 }

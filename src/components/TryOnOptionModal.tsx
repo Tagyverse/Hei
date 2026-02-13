@@ -1,9 +1,5 @@
-'use client';
-
 import React from 'react';
-import { createPortal } from 'react-dom';
 import { X, Camera, Palette, Sparkles } from 'lucide-react';
-import { useModalScroll } from '../hooks/useModalScroll';
 import type { Product } from '../types';
 
 interface TryOnOptionModalProps {
@@ -21,15 +17,13 @@ export default function TryOnOptionModal({
   onSelectColorMatcher,
   product
 }: TryOnOptionModalProps) {
-  useModalScroll(isOpen);
-
   if (!isOpen) return null;
 
   const hasColorMatcher = product.availableColors && product.availableColors.length > 0;
 
-  const modalContent = (
-    <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300 overflow-y-auto">
-      <div className="bg-white rounded-t-3xl md:rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-in slide-in-from-bottom md:zoom-in duration-300 border-4 border-black md:my-4">
+  return (
+    <div className="fixed inset-0 z-[105] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white rounded-t-3xl md:rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-in slide-in-from-bottom md:zoom-in duration-300 border-4 border-black">
         <div className="bg-[#B5E5CF] p-4 md:p-6 relative border-b-4 border-black rounded-t-3xl">
           <button
             onClick={onClose}
@@ -45,7 +39,7 @@ export default function TryOnOptionModal({
             <h2 className="text-lg md:text-2xl font-bold text-black">Choose Your Experience</h2>
           </div>
           <p className="text-black text-xs md:text-sm font-medium">
-            {"Select how you'd like to visualize this product"}
+            Select how you'd like to visualize this product
           </p>
         </div>
 
@@ -138,6 +132,4 @@ export default function TryOnOptionModal({
       </div>
     </div>
   );
-
-  return createPortal(modalContent, document.body);
 }

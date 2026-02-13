@@ -29,41 +29,34 @@ export default function PageLoader({ isVisible, progress = 0, message = 'Loading
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
-      <div className="space-y-8 w-full max-w-md px-8">
-        {/* Logo */}
+    <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+      <div className="space-y-6 w-full max-w-md px-6">
+        {/* Loading spinner */}
         <div className="flex justify-center">
-          <img
-            src="/logo.png"
-            alt="Pixie Blooms"
-            className="w-20 h-20 object-contain"
-          />
+          <div className="w-16 h-16 border-4 border-gray-200 border-t-teal-500 rounded-full animate-spin" />
         </div>
 
         {/* Message */}
-        <div className="text-center space-y-2">
-          <p className="text-sm text-gray-600 font-medium">{message}</p>
-        </div>
-
-        {/* Google-style animated dots loader */}
-        <div className="flex justify-center gap-2">
-          <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0s', animationDuration: '1.4s' }}></div>
-          <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s', animationDuration: '1.4s' }}></div>
-          <div className="w-2.5 h-2.5 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s', animationDuration: '1.4s' }}></div>
-          <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.6s', animationDuration: '1.4s' }}></div>
-          <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.8s', animationDuration: '1.4s' }}></div>
-          <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '1s', animationDuration: '1.4s' }}></div>
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Pixie Blooms</h2>
+          <p className="text-gray-600 text-sm">{message}</p>
         </div>
 
         {/* Progress bar */}
-        <div className="w-full space-y-3">
-          <div className="w-full bg-gray-200 rounded-full h-1 overflow-hidden">
+        <div className="w-full space-y-2">
+          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
             <div
-              className="bg-gradient-to-r from-blue-500 via-red-500 to-yellow-500 h-full transition-all duration-300 ease-out"
+              className="bg-gradient-to-r from-teal-400 to-teal-600 h-full transition-all duration-300 ease-out"
               style={{ width: `${Math.round(displayProgress)}%` }}
             />
           </div>
-          <p className="text-xs text-gray-400 text-center">{Math.round(displayProgress)}%</p>
+          <p className="text-xs text-gray-500 text-center">{Math.round(displayProgress)}%</p>
+        </div>
+
+        {/* Tips */}
+        <div className="text-xs text-gray-500 text-center space-y-1">
+          <p>Setting up your store...</p>
+          <p>Loading products & categories...</p>
         </div>
       </div>
     </div>

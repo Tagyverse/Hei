@@ -38,7 +38,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
             <div className="absolute inset-0 bg-gradient-to-br from-teal-400 to-mint-400 rounded-3xl animate-pulse-slow opacity-20 scale-110"></div>
             <div className="absolute inset-0 flex items-center justify-center">
               <img
-                src="/logo.png"
+                src="https://res.cloudinary.com/ds7pknmvg/image/upload/v1770820147/logo-pixieblooms_e09fgp.png"
                 alt="Pixie Blooms"
                 className="w-28 h-28 object-contain animate-fade-in"
               />

@@ -30,16 +30,16 @@ export default function TopBanner() {
   return (
     <div
       className="py-2 overflow-hidden"
-      style={{
+      style={{ 
         backgroundColor: bannerContent.backgroundColor,
         color: bannerContent.textColor || '#ffffff'
       }}
     >
       <div className="animate-marquee whitespace-nowrap inline-block">
-        <span className="text-sm font-semibold mx-8">{bannerContent.text}</span>
-        <span className="text-sm font-semibold mx-8">{bannerContent.text}</span>
-        <span className="text-sm font-semibold mx-8">{bannerContent.text}</span>
-        <span className="text-sm font-semibold mx-8">{bannerContent.text}</span>
+        <span className="text-sm font-semibold mx-8" style={{ color: 'inherit' }}>{bannerContent.text}</span>
+        <span className="text-sm font-semibold mx-8" style={{ color: 'inherit' }}>{bannerContent.text}</span>
+        <span className="text-sm font-semibold mx-8" style={{ color: 'inherit' }}>{bannerContent.text}</span>
+        <span className="text-sm font-semibold mx-8" style={{ color: 'inherit' }}>{bannerContent.text}</span>
       </div>
     </div>
   );

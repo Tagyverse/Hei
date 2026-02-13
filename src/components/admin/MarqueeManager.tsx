@@ -7,7 +7,8 @@ export default function MarqueeManager() {
   const [marqueeData, setMarqueeData] = useState({
     text: '',
     isVisible: true,
-    backgroundColor: '#f59e0b'
+    backgroundColor: '#f59e0b',
+    textColor: '#ffffff'
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -89,28 +90,48 @@ export default function MarqueeManager() {
               </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Background Color
-              </label>
-              <div className="flex gap-3 items-center">
-                <input
-                  type="color"
-                  value={marqueeData.backgroundColor}
-                  onChange={(e) => setMarqueeData({ ...marqueeData, backgroundColor: e.target.value })}
-                  className="h-12 w-20 rounded-xl border-2 border-teal-200 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={marqueeData.backgroundColor}
-                  onChange={(e) => setMarqueeData({ ...marqueeData, backgroundColor: e.target.value })}
-                  className="flex-1 px-4 py-3 border-2 border-teal-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  placeholder="#f59e0b"
-                />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Background Color
+                </label>
+                <div className="flex gap-3 items-center">
+                  <input
+                    type="color"
+                    value={marqueeData.backgroundColor}
+                    onChange={(e) => setMarqueeData({ ...marqueeData, backgroundColor: e.target.value })}
+                    className="h-12 w-20 rounded-xl border-2 border-teal-200 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={marqueeData.backgroundColor}
+                    onChange={(e) => setMarqueeData({ ...marqueeData, backgroundColor: e.target.value })}
+                    className="flex-1 px-4 py-3 border-2 border-teal-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    placeholder="#f59e0b"
+                  />
+                </div>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Choose a background color for the marquee banner
-              </p>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Text Color
+                </label>
+                <div className="flex gap-3 items-center">
+                  <input
+                    type="color"
+                    value={marqueeData.textColor || '#ffffff'}
+                    onChange={(e) => setMarqueeData({ ...marqueeData, textColor: e.target.value })}
+                    className="h-12 w-20 rounded-xl border-2 border-teal-200 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={marqueeData.textColor || '#ffffff'}
+                    onChange={(e) => setMarqueeData({ ...marqueeData, textColor: e.target.value })}
+                    className="flex-1 px-4 py-3 border-2 border-teal-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    placeholder="#ffffff"
+                  />
+                </div>
+              </div>
             </div>
 
             <div>
@@ -149,9 +170,9 @@ export default function MarqueeManager() {
               >
                 <div className="py-2 overflow-hidden">
                   <div className="animate-marquee whitespace-nowrap inline-block">
-                    <span className="text-sm font-semibold text-white mx-8">{marqueeData.text}</span>
-                    <span className="text-sm font-semibold text-white mx-8">{marqueeData.text}</span>
-                    <span className="text-sm font-semibold text-white mx-8">{marqueeData.text}</span>
+                    <span className="text-sm font-semibold mx-8" style={{ color: marqueeData.textColor || '#ffffff' }}>{marqueeData.text}</span>
+                    <span className="text-sm font-semibold mx-8" style={{ color: marqueeData.textColor || '#ffffff' }}>{marqueeData.text}</span>
+                    <span className="text-sm font-semibold mx-8" style={{ color: marqueeData.textColor || '#ffffff' }}>{marqueeData.text}</span>
                   </div>
                 </div>
               </div>

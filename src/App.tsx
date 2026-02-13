@@ -35,11 +35,8 @@ import { ref, get, onValue } from 'firebase/database';
 import { initAnalytics } from './utils/analytics';
 import { initPerformanceMonitoring } from './utils/performanceMonitoring';
 import { initFetchInterceptor } from './utils/fetchInterceptor';
-
+import { enableSmoothScrollCSS } from './utils/smoothScroll';
 import PageLoader from './components/PageLoader';
-import { monitorWebVitals, enableGPUAcceleration, respectReducedMotion, preloadCriticalImages } from './utils/performanceOptimization';
-import { generateAISiteDescription, generateAIKeywords, generateOrganizationSchema, injectSchema } from './utils/seoOptimization';
-import { preloadCriticalImages as preloadImages } from './utils/imageOptimization';
 
 type Page = 'home' | 'shop' | 'admin' | 'checkout' | 'superadmin' | 'privacy-policy' | 'shipping-policy' | 'refund-policy' | 'contact';
 
@@ -114,38 +111,14 @@ function AppContent() {
   const isAdminPage = currentPage === 'admin' || currentPage === 'superadmin';
 
   useEffect(() => {
-    // Performance optimizations
-    enableGPUAcceleration();
-    respectReducedMotion();
-    monitorWebVitals();
-    
+    // Enable smooth scrolling
+    enableSmoothScrollCSS();
     // Initialize fetch interceptor to suppress validation warnings
     initFetchInterceptor();
     // Initialize analytics tracking
     initAnalytics();
     // Initialize performance monitoring
     initPerformanceMonitoring();
-    
-    // SEO Initialization
-    try {
-      // Inject organization schema
-      injectSchema(generateOrganizationSchema());
-      
-      // Add AI-generated description to meta tags
-      const aiDescription = generateAISiteDescription();
-      const metaDescription = document.querySelector('meta[name="description"]');
-      if (metaDescription) {
-        metaDescription.setAttribute('content', aiDescription);
-      }
-      
-      // Update keywords with AI-generated ones
-      const metaKeywords = document.querySelector('meta[name="keywords"]');
-      if (metaKeywords) {
-        metaKeywords.setAttribute('content', generateAIKeywords().join(', '));
-      }
-    } catch (error) {
-      console.error('[SEO] Error initializing SEO:', error);
-    }
 
     const checkStoreStatus = async () => {
       try {
@@ -314,12 +287,16 @@ function AppContent() {
 
   return (
     <>
-      {showSplash && (
-        <SplashScreen onComplete={() => {
-          setShowSplash(false);
-          setAppReady(true);
-        }} />
-      )}
+      <PageLoader 
+        isVisible={showSplash && publishedDataLoading} 
+        progress={showSplash ? 50 : 100}
+        message="Loading Pixie Blooms..."
+      />
+      
+      {showSplash && <SplashScreen onComplete={() => {
+        setShowSplash(false);
+        setAppReady(true);
+      }} />}
 
       {/* Show Coming Soon if no published data and not on admin pages */}
       {appReady && publishedDataError && !isAdminPage && (
@@ -330,77 +307,76 @@ function AppContent() {
       {((!publishedDataError && appReady) || isAdminPage) && (
         <div className={`min-h-screen bg-white transition-opacity duration-500 ${appReady ? 'opacity-100' : 'opacity-0'}`}>
           <div className={`${temporarilyClosed && !hideNavigation ? 'grayscale pointer-events-none' : ''}`}>
-            {!hideNavigation && (
-              <>
-                <TopBanner />
-                {showWelcomeBanner && <WelcomeBanner />}
-                <Navigation
-                  currentPage={currentPage}
-                  onNavigate={handleNavigate}
-                  onLoginClick={() => setLoginModalOpen(true)}
-                  onCartClick={() => setCartModalOpen(true)}
-                  onOrdersClick={() => setOrdersSheetOpen(true)}
-                  onProductClick={handleProductClick}
-                />
-              </>
-            )}
+          {!hideNavigation && (
+            <>
+              <TopBanner />
+              {showWelcomeBanner && <WelcomeBanner />}
+              <Navigation
+                currentPage={currentPage}
+                onNavigate={handleNavigate}
+                onLoginClick={() => setLoginModalOpen(true)}
+                onCartClick={() => setCartModalOpen(true)}
+                onOrdersClick={() => setOrdersSheetOpen(true)}
+                onProductClick={handleProductClick}
+              />
+            </>
+          )}
 
-            {renderPage()}
+          {renderPage()}
 
-            <PurchaseNotification />
-            <OfferDialog />
-            <WelcomeCouponDialog />
-            <FeedbackPanel />
+          <PurchaseNotification />
+          <OfferDialog />
+          <WelcomeCouponDialog />
+          <FeedbackPanel />
 
-            {!hideNavigation && <Footer onNavigate={handleNavigate} />}
-          </div>
+          <LoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
+          <CartModal
+            isOpen={cartModalOpen}
+            onClose={() => setCartModalOpen(false)}
+            onCheckout={() => handleNavigate('checkout')}
+          />
+          <MyOrdersSheet
+            isOpen={ordersSheetOpen}
+            onClose={() => setOrdersSheetOpen(false)}
+            onLoginClick={() => {
+              setOrdersSheetOpen(false);
+              setLoginModalOpen(true);
+            }}
+          />
+          <ProductDetailsSheet
+            product={selectedProduct}
+            isOpen={showProductDetails}
+            onClose={() => {
+              setShowProductDetails(false);
+              setSelectedProduct(null);
+              const urlParams = new URLSearchParams(window.location.search);
+              if (urlParams.has('product')) {
+                const currentPath = window.location.pathname;
+                window.history.pushState({}, '', currentPath);
+              }
+            }}
+          />
 
-          {temporarilyClosed && !hideNavigation && (
-            <div className="fixed top-32 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
-              <div className="bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl shadow-2xl p-6 border-4 border-white max-w-2xl w-full pointer-events-auto animate-pulse">
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-3 mb-3">
-                    <span className="text-3xl">🔒</span>
-                    <h2 className="text-2xl font-bold text-white">Temporarily Closed</h2>
-                  </div>
-                  <p className="text-white text-base font-medium">
-                    We're currently closed. Please check back later. Thank you for your patience.
-                  </p>
+          {!hideNavigation && <Footer onNavigate={handleNavigate} />}
+        </div>
+
+        {temporarilyClosed && !hideNavigation && (
+          <div className="fixed top-32 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
+            <div className="bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl shadow-2xl p-6 border-4 border-white max-w-2xl w-full pointer-events-auto animate-pulse">
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-3 mb-3">
+                  <span className="text-3xl">🔒</span>
+                  <h2 className="text-2xl font-bold text-white">Temporarily Closed</h2>
                 </div>
+                <p className="text-white text-base font-medium">
+                  We're currently closed. Please check back later. Thank you for your patience.
+                </p>
               </div>
             </div>
-          )}
+          </div>
+        )}
         </div>
       )}
-
-      {/* Modals rendered outside the grayscale container to fix position: fixed */}
-      <LoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
-      <CartModal
-        isOpen={cartModalOpen}
-        onClose={() => setCartModalOpen(false)}
-        onCheckout={() => handleNavigate('checkout')}
-      />
-      <MyOrdersSheet
-        isOpen={ordersSheetOpen}
-        onClose={() => setOrdersSheetOpen(false)}
-        onLoginClick={() => {
-          setOrdersSheetOpen(false);
-          setLoginModalOpen(true);
-        }}
-      />
-      <ProductDetailsSheet
-        product={selectedProduct}
-        isOpen={showProductDetails}
-        onClose={() => {
-          setShowProductDetails(false);
-          setSelectedProduct(null);
-          const urlParams = new URLSearchParams(window.location.search);
-          if (urlParams.has('product')) {
-            const currentPath = window.location.pathname;
-            window.history.pushState({}, '', currentPath);
-          }
-        }}
-      />
     </>
   );
 }

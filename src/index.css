@@ -2,57 +2,44 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Normal scrollbar styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #999;
-}
-
-/* Proper scroll behavior and modal support */
 html {
-  scroll-behavior: auto;
-}
-
-body {
-  scroll-behavior: auto;
-}
-
-/* Allow smooth scroll for specific elements, but not * */
-.smooth-scroll {
   scroll-behavior: smooth;
 }
 
-/* Modal overflow fix - prevent body scroll when modal is open */
-body.modal-open {
-  overflow: hidden;
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-/* Ensure modals are above everything */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
+*::-webkit-scrollbar {
+  display: none;
 }
 
-.modal-content {
-  position: fixed;
-  z-index: 50;
+.scroll-smooth {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
+.snap-x {
+  scroll-snap-type: x proximity;
+}
 
+.snap-mandatory {
+  scroll-snap-type: x mandatory;
+}
+
+.snap-start {
+  scroll-snap-align: start;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
 
 @layer utilities {
   .text-gradient {

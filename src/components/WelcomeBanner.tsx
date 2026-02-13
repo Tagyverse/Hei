@@ -27,7 +27,9 @@ export default function WelcomeBanner() {
   const defaultBannerContent = {
     title: 'Welcome to Pixie Blooms!',
     subtitle: 'Discover our exclusive collection of handcrafted hair accessories',
-    isVisible: true
+    isVisible: true,
+    backgroundColor: '#14b8a6',
+    textColor: '#ffffff'
   };
 
   const bannerContent = publishedData?.site_content?.welcome_banner?.value || defaultBannerContent;
@@ -69,15 +71,17 @@ export default function WelcomeBanner() {
     return null;
   }
 
-  // Determine if text color is light or dark for better contrast
-  const textColor = bannerContent.text_color || '#ffffff';
-  const bgColor = bannerContent.bg_color || '#06b6d4';
-
   return (
-    <div className="py-6 px-4 text-center" style={{ backgroundColor: bgColor }}>
+    <div 
+      className="py-6 px-4 text-center"
+      style={{ 
+        backgroundColor: bannerContent.backgroundColor || '#14b8a6',
+        color: bannerContent.textColor || '#ffffff'
+      }}
+    >
       <div className="max-w-6xl mx-auto">
-        <h2 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: textColor }}>{bannerContent.title}</h2>
-        <p className="text-sm md:text-base mb-4" style={{ color: textColor, opacity: 0.95 }}>{bannerContent.subtitle}</p>
+        <h2 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: 'inherit' }}>{bannerContent.title}</h2>
+        <p className="text-sm md:text-base mb-4" style={{ color: 'inherit', opacity: 0.9 }}>{bannerContent.subtitle}</p>
         
         <div className="flex justify-center items-center gap-4 mt-4">
           {socialLinks.map((social) => {
@@ -88,7 +92,11 @@ export default function WelcomeBanner() {
                 href={social.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-white/20 hover:bg-white/30 p-3 rounded-full transition-all transform hover:scale-110"
+                className="p-3 rounded-full transition-all transform hover:scale-110"
+                style={{ 
+                  backgroundColor: `${bannerContent.textColor || '#ffffff'}33`, // 20% opacity
+                  color: 'inherit'
+                }}
                 aria-label={social.platform}
               >
                 <IconComponent className="w-5 h-5" />

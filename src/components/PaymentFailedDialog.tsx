@@ -1,5 +1,3 @@
-'use client';
-
 import { X, AlertCircle } from 'lucide-react';
 
 interface PaymentFailedDialogProps {
@@ -15,15 +13,13 @@ export default function PaymentFailedDialog({
   onRetry,
   errorMessage
 }: PaymentFailedDialogProps) {
-
-
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl max-w-md mx-auto w-full border-t-4 border-black animate-slide-up h-[90vh] sm:h-auto overflow-hidden flex flex-col">
+      <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl max-w-md mx-auto w-full border-t-4 border-black animate-slide-up max-h-[90vh] overflow-hidden flex flex-col">
         <div className="bg-[#B5E5CF] p-6 relative border-b-4 border-black rounded-t-3xl flex-shrink-0">
           <div className="w-12 h-1.5 bg-black rounded-full mx-auto mb-4"></div>
           <button

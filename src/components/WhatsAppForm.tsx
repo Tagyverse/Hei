@@ -35,7 +35,7 @@ export default function WhatsAppForm() {
           <div className="bg-[#075E54] p-3 sm:p-4 flex items-center gap-3 border-b border-gray-200">
             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center p-1.5 border-2 border-white">
               <img
-                src="/logo.png"
+                src="https://res.cloudinary.com/ds7pknmvg/image/upload/v1770820147/logo-pixieblooms_e09fgp.png"
                 alt="Store"
                 className="w-full h-full object-contain"
               />
@@ -55,7 +55,7 @@ export default function WhatsAppForm() {
               <div className="flex gap-2">
                 <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center flex-shrink-0 border border-gray-200 p-1">
                   <img
-                    src="/logo.png"
+                    src="https://res.cloudinary.com/ds7pknmvg/image/upload/v1770820147/logo-pixieblooms_e09fgp.png"
                     alt="Store"
                     className="w-full h-full object-contain"
                   />

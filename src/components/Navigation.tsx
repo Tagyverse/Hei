@@ -181,7 +181,7 @@ export default function Navigation({ currentPage, onNavigate, onLoginClick, onCa
             className="group flex flex-col items-center gap-2 mb-4"
           >
             <img
-              src="/logo.png"
+              src="https://res.cloudinary.com/ds7pknmvg/image/upload/v1770820147/logo-pixieblooms_e09fgp.png"
               alt="Pixie Blooms"
               className="w-28 h-28 sm:w-36 sm:h-36 lg:w-44 lg:h-44 object-contain group-hover:scale-105 transition-transform duration-300"
             />

@@ -1,8 +1,5 @@
-'use client';
-
 import { CheckCircle, Package, X } from 'lucide-react';
-import { createPortal } from 'react-dom';
-import { useModalScroll } from '../hooks/useModalScroll';
+import { useEffect } from 'react';
 
 interface OrderConfirmationDialogProps {
   isOpen: boolean;
@@ -15,12 +12,22 @@ interface OrderConfirmationDialogProps {
 }
 
 export default function OrderConfirmationDialog({ isOpen, onClose, orderDetails }: OrderConfirmationDialogProps) {
-  useModalScroll(isOpen);
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const modalContent = (
-    <div className="fixed inset-0 z-[9999]">
+  return (
+    <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl max-w-md mx-auto w-full border-t-4 border-black animate-slide-up">
@@ -52,7 +59,7 @@ export default function OrderConfirmationDialog({ isOpen, onClose, orderDetails 
           </p>
 
           <p className="text-black mb-8 font-medium">
-            {"We've received your order and will process it shortly. You'll receive a confirmation email soon."}
+            We've received your order and will process it shortly. You'll receive a confirmation email soon.
           </p>
 
           {orderDetails && (
@@ -69,7 +76,7 @@ export default function OrderConfirmationDialog({ isOpen, onClose, orderDetails 
                 </div>
                 <div className="flex justify-between">
                   <span className="text-black font-medium">Total Amount:</span>
-                  <span className="font-bold text-black">{'₹'}{orderDetails.totalAmount.toFixed(2)}</span>
+                  <span className="font-bold text-black">₹{orderDetails.totalAmount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-black font-medium">Customer:</span>
@@ -89,6 +96,4 @@ export default function OrderConfirmationDialog({ isOpen, onClose, orderDetails 
       </div>
     </div>
   );
-
-  return createPortal(modalContent, document.body);
 }
