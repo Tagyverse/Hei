@@ -225,14 +225,14 @@ export default function VirtualTryOn({ isOpen, onClose, product: initialProduct 
       
       const constraints = {
         video: {
-          facingMode: selectedCamera || 'user',
+          facingMode: currentFacingModeRef.current || 'user',
           width: { ideal: 1280, min: 640 },
           height: { ideal: 720, min: 480 },
         },
         audio: false,
       };
 
-      console.log('[V0] Requesting camera with facingMode:', selectedCamera);
+      console.log('[V0] Requesting camera with facingMode:', currentFacingModeRef.current);
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
       if (!isMountedRef.current) {
@@ -595,58 +595,60 @@ export default function VirtualTryOn({ isOpen, onClose, product: initialProduct 
           <>
             <button
               onClick={handlePrevProduct}
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-black bg-opacity-50 backdrop-blur-sm text-white p-4 rounded-full hover:bg-opacity-70 transition-all"
+              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-30 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white p-2.5 sm:p-3.5 rounded-full transition-all hover:scale-110 active:scale-95 border border-white/20"
+              title="Previous Product"
             >
-              <ChevronLeft className="w-8 h-8" />
+              <ChevronLeft className="w-5 h-5 sm:w-7 sm:h-7" />
             </button>
             <button
               onClick={handleNextProduct}
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-black bg-opacity-50 backdrop-blur-sm text-white p-4 rounded-full hover:bg-opacity-70 transition-all"
+              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-30 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white p-2.5 sm:p-3.5 rounded-full transition-all hover:scale-110 active:scale-95 border border-white/20"
+              title="Next Product"
             >
-              <ChevronRight className="w-8 h-8" />
+              <ChevronRight className="w-5 h-5 sm:w-7 sm:h-7" />
             </button>
           </>
         )}
 
-        <div className="absolute top-20 right-4 z-30 flex flex-col gap-2">
+        <div className="absolute top-4 sm:top-6 right-3 sm:right-4 z-30 flex flex-col gap-2 sm:gap-3">
           {useLiveCamera && (
             <button
               onClick={flipCamera}
-              className="bg-black bg-opacity-50 backdrop-blur-sm text-white p-3 rounded-full hover:bg-opacity-70 transition-all duration-200 hover:scale-110 disabled:opacity-50"
+              className="bg-black/60 hover:bg-black/80 backdrop-blur-md text-white p-2.5 sm:p-3 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 border border-white/20"
               disabled={isLoading}
               title="Flip Camera"
             >
-              <RotateCw className="w-6 h-6" />
+              <RotateCw className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           )}
         </div>
 
-        <div className="absolute top-20 left-4 z-30 flex flex-col gap-2">
+        <div className="absolute top-4 sm:top-6 left-3 sm:left-4 z-30 flex flex-col gap-2 sm:gap-3">
           <button
             onClick={toggleBackgroundMode}
-            className={`backdrop-blur-sm text-white p-3 rounded-full transition-all duration-200 hover:scale-110 ${
-              useLiveCamera ? 'bg-blue-500 bg-opacity-70' : 'bg-black bg-opacity-50'
+            className={`backdrop-blur-md text-white p-2.5 sm:p-3 rounded-full transition-all duration-200 hover:scale-110 border border-white/20 ${
+              useLiveCamera ? 'bg-pink-500/70 hover:bg-pink-600/70' : 'bg-black/60 hover:bg-black/80'
             }`}
             title="Toggle Camera/Model"
           >
-            <Video className="w-6 h-6" />
+            <Video className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
 
           {!useLiveCamera && models.length > 0 && (
             <button
               onClick={() => setShowModelSelector(!showModelSelector)}
-              className="bg-black bg-opacity-50 backdrop-blur-sm text-white p-3 rounded-full hover:bg-opacity-70 transition-all duration-200 hover:scale-110"
+              className="bg-black/60 hover:bg-black/80 backdrop-blur-md text-white p-2.5 sm:p-3 rounded-full transition-all duration-200 hover:scale-110 border border-white/20"
               title="Select Model"
             >
-              <ImageIcon className="w-6 h-6" />
+              <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           )}
         </div>
 
         {showModelSelector && !useLiveCamera && (
-          <div className="absolute top-36 left-4 z-30 bg-black bg-opacity-80 backdrop-blur-sm rounded-2xl p-4 max-w-xs">
-            <h3 className="text-white font-semibold mb-3 text-sm">Select Background</h3>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+          <div className="absolute top-20 sm:top-32 left-3 sm:left-4 z-30 bg-black/80 backdrop-blur-md rounded-2xl p-3 sm:p-4 max-w-xs border border-white/10">
+            <h3 className="text-white font-semibold mb-3 text-xs sm:text-sm">Select Background</h3>
+            <div className="space-y-2 max-h-56 sm:max-h-64 overflow-y-auto pr-2">
               {models.map((model) => (
                 <button
                   key={model.id}
@@ -654,18 +656,18 @@ export default function VirtualTryOn({ isOpen, onClose, product: initialProduct 
                     setSelectedModel(model);
                     setShowModelSelector(false);
                   }}
-                  className={`w-full flex items-center gap-3 p-2 rounded-lg transition-all ${
+                  className={`w-full flex items-center gap-2.5 p-2 sm:p-3 rounded-lg transition-all border ${
                     selectedModel?.id === model.id
-                      ? 'bg-blue-500 bg-opacity-50'
-                      : 'bg-white bg-opacity-10 hover:bg-opacity-20'
+                      ? 'bg-pink-500/40 border-pink-400'
+                      : 'bg-white/5 hover:bg-white/10 border-white/10'
                   }`}
                 >
                   <img
                     src={model.image_url}
                     alt={model.name}
-                    className="w-12 h-12 object-cover rounded"
+                    className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded flex-shrink-0"
                   />
-                  <span className="text-white text-sm font-medium">{model.name}</span>
+                  <span className="text-white text-xs sm:text-sm font-medium line-clamp-1">{model.name}</span>
                 </button>
               ))}
             </div>
@@ -674,15 +676,16 @@ export default function VirtualTryOn({ isOpen, onClose, product: initialProduct 
 
         {/* Product Carousel at bottom (Snapchat-like) */}
         {!isLoading && (useLiveCamera ? isCameraReady : true) && allProducts.length > 0 && (
-          <div className="absolute bottom-24 left-0 right-0 z-30 overflow-x-auto pb-4 scrollbar-hide">
-            <div className="flex gap-4 px-8 items-center justify-center">
+          <div className="absolute bottom-20 sm:bottom-24 left-0 right-0 z-30 overflow-x-auto pb-3 sm:pb-4 scrollbar-hide">
+            <div className="flex gap-2 sm:gap-4 px-4 sm:px-8 items-center justify-center min-w-full">
               {allProducts.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => setCurrentProduct(p)}
-                  className={`flex-shrink-0 w-16 h-16 rounded-full overflow-hidden border-4 transition-all duration-200 ${
-                    currentProduct?.id === p.id ? 'border-blue-500 scale-110 shadow-lg' : 'border-white/50 scale-90'
+                  className={`flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden border-3 sm:border-4 transition-all duration-200 ${
+                    currentProduct?.id === p.id ? 'border-pink-500 scale-110 shadow-lg' : 'border-white/50 scale-90'
                   }`}
+                  title={p.name}
                 >
                   <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
                 </button>
@@ -692,11 +695,11 @@ export default function VirtualTryOn({ isOpen, onClose, product: initialProduct 
         )}
 
         {!isLoading && (useLiveCamera ? isCameraReady : true) && (
-          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-30">
-            <div className="bg-black bg-opacity-50 rounded-full px-6 py-3 flex gap-4 items-center backdrop-blur-sm shadow-2xl">
+          <div className="absolute bottom-3 sm:bottom-6 left-1/2 transform -translate-x-1/2 z-30">
+            <div className="bg-black/60 backdrop-blur-md rounded-full px-3 sm:px-6 py-2.5 sm:py-3 flex gap-2 sm:gap-4 items-center shadow-2xl border border-white/10">
               <button
                 onClick={() => smoothZoom(imageTransform.scale - 0.15)}
-                className="text-white p-2 hover:bg-white hover:bg-opacity-20 rounded-full transition-all duration-200 hover:scale-110 active:scale-95"
+                className="text-white p-1.5 sm:p-2 hover:bg-white/20 rounded-full transition-all duration-200 hover:scale-110 active:scale-95"
                 title="Zoom Out"
               >
                 <ZoomOut className="w-5 h-5" />
@@ -704,23 +707,23 @@ export default function VirtualTryOn({ isOpen, onClose, product: initialProduct 
 
               <button
                 onClick={() => smoothZoom(imageTransform.scale + 0.15)}
-                className="text-white p-2 hover:bg-white hover:bg-opacity-20 rounded-full transition-all duration-200 hover:scale-110 active:scale-95"
+                className="text-white p-1.5 sm:p-2 hover:bg-white/20 rounded-full transition-all duration-200 hover:scale-110 active:scale-95"
                 title="Zoom In"
               >
-                <ZoomIn className="w-5 h-5" />
+                <ZoomIn className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
           </div>
         )}
 
-        <div className="absolute bottom-4 left-4 z-30 bg-black bg-opacity-60 backdrop-blur-sm px-4 py-2 rounded-lg">
-          <p className="text-white text-sm font-semibold">
+        <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 z-30 bg-black/60 backdrop-blur-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-white/10">
+          <p className="text-white text-xs sm:text-sm font-semibold">
             by{' '}
             <a
               href="https://www.tagyverse.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="underline hover:text-blue-300 transition-colors duration-200"
+              className="underline hover:text-pink-300 transition-colors duration-200"
             >
               tagyverse
             </a>

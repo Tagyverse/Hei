@@ -127,10 +127,12 @@ export default function BillCustomizer() {
   };
 
   const saveSettings = async () => {
-    // Verify admin authentication
+    // Verify admin authentication - must be logged in as admin
     const isAuthenticated = localStorage.getItem('adminAuthenticated') === 'true';
-    if (!isAuthenticated) {
-      alert('You are not authorized to edit settings. Please login as admin first.');
+    const adminId = localStorage.getItem('adminId');
+    
+    if (!isAuthenticated || !adminId) {
+      alert('Access Denied: You are not authorized to edit bill settings. Only logged-in admins can modify these settings. Please login to the admin panel first.');
       return;
     }
 

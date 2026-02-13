@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
-import { X, Upload, Sparkles, CheckCircle, AlertCircle, Camera, Image as ImageIcon, ArrowLeft, RefreshCcw, ShieldCheck, Palette } from 'lucide-react';
+import { X, Upload, Sparkles, CheckCircle, AlertCircle, Camera, Image as ImageIcon, ArrowLeft, RefreshCcw, Palette, ChevronRight } from 'lucide-react';
 import { usePublishedData } from '../contexts/PublishedDataContext';
 import { objectToArray } from '../utils/publishedData';
 import type { Product } from '../types';
@@ -345,101 +345,111 @@ export default function DressColorMatcher({ isOpen, onClose, currentProduct }: D
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-end md:items-center justify-center p-0 sm:p-4">
-      <div className="bg-white rounded-t-3xl md:rounded-3xl shadow-2xl max-w-4xl w-full h-[95vh] md:h-auto md:max-h-[90vh] overflow-hidden border-4 border-black flex flex-col">
-        {/* Header */}
-        <div className="bg-[#FFD1DC] p-4 md:p-6 flex items-center justify-between border-b-4 border-black shrink-0">
-          <div className="flex items-center gap-2 md:gap-3">
-            <div className="w-10 h-10 md:w-14 md:h-14 bg-white rounded-xl flex items-center justify-center border-2 border-black">
-              <Palette className="w-6 h-6 md:w-8 md:h-8 text-pink-500" />
+    <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-end md:items-center justify-center p-0 sm:p-4">
+      <div className="bg-white rounded-t-3xl md:rounded-3xl shadow-2xl max-w-5xl w-full h-[95vh] md:h-auto md:max-h-[92vh] overflow-hidden flex flex-col">
+        {/* Material Design Header */}
+        <div className="bg-gradient-to-r from-pink-500 to-rose-500 p-4 sm:p-5 md:p-6 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3 md:gap-4 flex-1">
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/40">
+              <Palette className="w-5 h-5 md:w-6 md:h-6 text-white" />
             </div>
-            <div>
-              <h2 className="text-lg md:text-2xl font-black text-black">Dress Color Matcher</h2>
-              <p className="text-black/70 text-[10px] md:text-sm font-bold">Find matching accessories for your outfit</p>
+            <div className="flex-1">
+              <h2 className="text-base sm:text-lg md:text-2xl font-bold text-white leading-tight">Dress Color Matcher</h2>
+              <p className="text-white/80 text-xs sm:text-sm font-medium hidden sm:block">Find perfect matching pieces for your outfit</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="bg-white text-black w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 transition-all border-2 border-black hover:scale-110"
+            className="flex-shrink-0 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 border border-white/40"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
 
-        <div className="overflow-y-auto flex-1 p-4 md:p-8 bg-white">
+        <div className="overflow-y-auto flex-1 p-3 sm:p-4 md:p-6 bg-gradient-to-b from-pink-50/50 to-white">
           {step === 'upload' && (
-            <div className="max-w-md mx-auto space-y-8 py-6 md:py-12">
-              <div className="text-center space-y-4">
-                <div className="w-20 h-20 bg-pink-50 rounded-full flex items-center justify-center mx-auto border-4 border-pink-100 relative">
-                  <Sparkles className="absolute -top-1 -right-1 text-yellow-500 w-6 h-6" />
-                  <Palette className="w-10 h-10 text-pink-500" />
+            <div className="max-w-lg mx-auto space-y-6 sm:space-y-8 py-4 sm:py-8">
+              <div className="text-center space-y-3 sm:space-y-4">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-pink-100 rounded-full flex items-center justify-center mx-auto border-4 border-pink-200 relative shadow-md">
+                  <Sparkles className="absolute -top-2 -right-2 text-yellow-500 w-5 h-5 sm:w-6 sm:h-6 drop-shadow-md" />
+                  <Palette className="w-8 h-8 sm:w-10 sm:h-10 text-pink-600" />
                 </div>
-                <h3 className="text-2xl font-black text-gray-900">How to start?</h3>
-                <p className="text-gray-500 font-medium">Take a photo of your dress or upload an existing image.</p>
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Let's Find Your Match</h3>
+                  <p className="text-gray-600 text-xs sm:text-sm font-medium mt-1">Capture your dress color and discover matching accessories</p>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:gap-4">
                 <button
                   onClick={startCamera}
-                  className="group flex items-center gap-4 p-6 bg-white border-4 border-black rounded-2xl hover:bg-pink-50 transition-all shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1"
+                  className="group flex items-start sm:items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-white rounded-2xl hover:bg-pink-50 transition-all border border-pink-200 hover:border-pink-400 hover:shadow-lg active:scale-95"
                 >
-                  <div className="w-14 h-14 bg-pink-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Camera className="w-8 h-8 text-pink-600" />
+                  <div className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 bg-pink-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Camera className="w-6 h-6 sm:w-7 sm:h-7 text-pink-600" />
                   </div>
-                  <div className="text-left">
-                    <p className="font-black text-lg">Use Camera</p>
-                    <p className="text-sm text-gray-500 font-bold">Snap a quick photo</p>
+                  <div className="text-left flex-1">
+                    <p className="font-bold text-sm sm:text-base text-gray-900">Use Camera</p>
+                    <p className="text-xs sm:text-sm text-gray-500 font-medium">Snap a quick photo</p>
                   </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400 hidden sm:block group-hover:text-pink-600 transition-colors" />
                 </button>
 
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="group flex items-center gap-4 p-6 bg-white border-4 border-black rounded-2xl hover:bg-blue-50 transition-all shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1"
+                  className="group flex items-start sm:items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-white rounded-2xl hover:bg-blue-50 transition-all border border-blue-200 hover:border-blue-400 hover:shadow-lg active:scale-95"
                 >
-                  <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Upload className="w-8 h-8 text-blue-600" />
+                  <div className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 bg-blue-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <ImageIcon className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" />
                   </div>
-                  <div className="text-left">
-                    <p className="font-black text-lg">Upload Photo</p>
-                    <p className="text-sm text-gray-500 font-bold">Choose from gallery</p>
+                  <div className="text-left flex-1">
+                    <p className="font-bold text-sm sm:text-base text-gray-900">Upload Photo</p>
+                    <p className="text-xs sm:text-sm text-gray-500 font-medium">Choose from gallery</p>
                   </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400 hidden sm:block group-hover:text-blue-600 transition-colors" />
                 </button>
               </div>
               
               <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
 
               {cameraError && (
-                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-center gap-3">
-                  <ShieldCheck className="w-5 h-5 text-red-500" />
-                  <p className="text-red-600 text-sm font-bold">{cameraError}</p>
+                <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 flex items-start gap-3 shadow-sm">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-red-700 text-xs sm:text-sm font-medium">{cameraError}</p>
                 </div>
               )}
             </div>
           )}
 
           {step === 'camera' && (
-            <div className="max-w-2xl mx-auto space-y-6">
-              <div className="relative bg-black rounded-3xl overflow-hidden border-4 border-black aspect-square shadow-2xl">
+            <div className="max-w-2xl mx-auto space-y-4 py-4">
+              <div className="relative bg-black rounded-3xl overflow-hidden aspect-square shadow-2xl">
                 <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                <div className="absolute inset-0 border-[40px] border-black/30 pointer-events-none">
-                  <div className="w-full h-full border-2 border-dashed border-white/50 rounded-lg flex items-center justify-center">
-                    <div className="w-12 h-12 border-2 border-white rounded-full"></div>
+                {/* Guide overlay */}
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="w-32 h-32 sm:w-40 sm:h-40 border-2 border-dashed border-pink-400/50 rounded-full"></div>
                   </div>
                 </div>
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4">
-                  <div className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-full text-white text-[10px] font-bold border border-white/20">
-                    Place dress color in the center
+                {/* Instruction text */}
+                <div className="absolute top-4 left-1/2 -translate-x-1/2">
+                  <div className="bg-black/40 backdrop-blur-md px-3 sm:px-4 py-2 rounded-full text-white text-xs sm:text-sm font-medium border border-white/20">
+                    Position dress in the center
                   </div>
+                </div>
+                {/* Capture button */}
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
                   <button
                     onClick={capturePhoto}
-                    className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-full border-8 border-gray-300 flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-2xl touch-none"
+                    className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full border-4 sm:border-6 border-gray-300 flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-2xl touch-none focus:outline-none focus:ring-4 focus:ring-pink-400/50"
                   >
-                    <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-pink-500 rounded-full"></div>
+                    <div className="w-10 h-10 sm:w-14 sm:h-14 bg-gradient-to-br from-pink-500 to-rose-500 rounded-full animate-pulse"></div>
                   </button>
                 </div>
+                {/* Back button */}
                 <button
                   onClick={() => setStep('upload')}
-                  className="absolute top-4 left-4 bg-black/50 text-white p-2 rounded-xl border border-white/20"
+                  className="absolute top-4 right-4 bg-black/40 hover:bg-black/60 backdrop-blur-md text-white p-2 rounded-full border border-white/20 transition-all active:scale-90"
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </button>
@@ -448,72 +458,83 @@ export default function DressColorMatcher({ isOpen, onClose, currentProduct }: D
           )}
 
           {step === 'processing' && (
-            <div className="flex flex-col items-center justify-center py-20">
-              <div className="relative">
-                <div className="w-20 h-20 border-8 border-pink-100 border-t-pink-500 rounded-full animate-spin"></div>
-                <Sparkles className="w-8 h-8 text-pink-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+            <div className="flex flex-col items-center justify-center py-12 sm:py-16 md:py-20 px-4">
+              <div className="relative mb-6 sm:mb-8">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 border-4 sm:border-6 border-pink-100 border-t-pink-500 rounded-full animate-spin"></div>
+                <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-pink-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-bounce" />
               </div>
-              <p className="text-xl font-black text-gray-900 mt-6">Analyzing your style...</p>
-              <p className="text-gray-500 font-bold mt-2">Finding the perfect matches</p>
+              <p className="text-lg sm:text-xl font-bold text-gray-900 text-center">Analyzing your style...</p>
+              <p className="text-gray-500 text-xs sm:text-sm font-medium mt-2 text-center">Finding the perfect matches</p>
             </div>
           )}
 
           {step === 'results' && (
-            <div className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-black text-black uppercase tracking-widest">Your Dress</h3>
-                  <div className="relative aspect-square rounded-2xl overflow-hidden border-4 border-black shadow-lg">
+            <div className="space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                {/* Dress preview */}
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm sm:text-base font-bold text-gray-900 uppercase tracking-wide">Your Dress</h3>
+                    <button
+                      onClick={() => setStep('upload')}
+                      className="flex items-center gap-1.5 bg-pink-50 hover:bg-pink-100 text-pink-600 text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-semibold transition-colors border border-pink-200"
+                    >
+                      <RefreshCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Try Again
+                    </button>
+                  </div>
+                  <div className="relative aspect-square rounded-2xl overflow-hidden shadow-lg border border-gray-200">
                     <img src={uploadedImage!} alt="Dress" className="w-full h-full object-cover" />
-                    <div className="absolute bottom-4 left-4 right-4 flex flex-wrap gap-2">
-                      {detectedColors.map((color, idx) => (
-                        <div key={idx} className="bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full border-2 border-black flex items-center gap-2 shadow-md">
-                          <div className="w-4 h-4 rounded-full border border-black/20" style={{ backgroundColor: color.hex }}></div>
-                          <span className="text-[10px] font-black uppercase">{color.name}</span>
-                        </div>
-                      ))}
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3 sm:p-4">
+                      <div className="flex flex-wrap gap-2">
+                        {detectedColors.map((color, idx) => (
+                          <div key={idx} className="bg-white/95 backdrop-blur-sm px-2.5 sm:px-3 py-1 rounded-full border border-gray-200 flex items-center gap-1.5 shadow-sm">
+                            <div className="w-3.5 h-3.5 rounded-full border border-gray-300" style={{ backgroundColor: color.hex }}></div>
+                            <span className="text-[10px] sm:text-xs font-bold uppercase text-gray-900">{color.name}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                  <button
-                    onClick={() => setStep('upload')}
-                    className="w-full bg-white border-2 border-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-gray-100"
-                  >
-                    <RefreshCcw className="w-4 h-4" /> Try Another
-                  </button>
                 </div>
 
-                <div className="space-y-4">
+                {/* Matched products */}
+                <div className="space-y-3 sm:space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-black text-black uppercase tracking-widest">Matches Found</h3>
-                    <div className="bg-pink-100 text-pink-600 px-3 py-1 rounded-full text-xs font-black border-2 border-pink-200">
-                      {matchedProducts.length} ITEMS
+                    <h3 className="text-sm sm:text-base font-bold text-gray-900 uppercase tracking-wide">Matches</h3>
+                    <div className="bg-gradient-to-r from-pink-100 to-rose-100 text-pink-700 text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-bold border border-pink-200">
+                      {matchedProducts.length} found
                     </div>
                   </div>
 
-                  <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="space-y-2.5 sm:space-y-3 max-h-[400px] sm:max-h-[500px] overflow-y-auto pr-2">
                     {matchedProducts.length === 0 ? (
-                      <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-12 text-center">
-                        <AlertCircle className="w-10 h-10 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-500 font-bold">No perfect matches found.</p>
+                      <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-6 sm:p-8 text-center">
+                        <AlertCircle className="w-8 h-8 sm:w-10 sm:h-10 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500 text-xs sm:text-sm font-medium">No matching items found</p>
                       </div>
                     ) : (
                       matchedProducts.map(({ product, matchPercentage }) => (
-                        <div key={product.id} className="group bg-white border-2 border-black rounded-2xl p-3 flex gap-4 hover:shadow-lg transition-all">
-                          <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-gray-100 flex-shrink-0">
-                            <LazyImage src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                        <div key={product.id} className="group bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 flex gap-3 hover:shadow-md hover:border-pink-300 transition-all cursor-pointer">
+                          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-100">
+                            <LazyImage src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
                           </div>
-                          <div className="flex-1 flex flex-col justify-between py-1">
-                            <div>
-                              <div className="flex items-center justify-between">
-                                <h4 className="font-black text-sm text-gray-900 line-clamp-1">{product.name}</h4>
-                                <span className="text-[10px] font-black text-pink-500 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">{matchPercentage}% MATCH</span>
+                          <div className="flex-1 flex flex-col justify-between">
+                            <div className="space-y-1">
+                              <div className="flex items-start justify-between gap-2">
+                                <h4 className="font-semibold text-xs sm:text-sm text-gray-900 line-clamp-2 leading-tight">{product.name}</h4>
+                                <div className="flex-shrink-0 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full font-bold whitespace-nowrap">
+                                  {matchPercentage}% MATCH
+                                </div>
                               </div>
-                              <p className="text-pink-600 font-black text-sm mt-1">₹{product.price}</p>
+                              <p className="text-pink-600 font-bold text-xs sm:text-sm">₹{product.price}</p>
                             </div>
-                            <div className="flex gap-1 mt-2">
-                              {product.availableColors?.slice(0, 5).map((c, i) => (
-                                <div key={i} className="w-3 h-3 rounded-full border border-gray-100" style={{ backgroundColor: c }}></div>
+                            <div className="flex gap-1.5">
+                              {product.availableColors?.slice(0, 4).map((c, i) => (
+                                <div key={i} className="w-3 h-3 sm:w-4 sm:h-4 rounded-full border border-gray-300 shadow-sm" style={{ backgroundColor: c }}></div>
                               ))}
+                              {product.availableColors && product.availableColors.length > 4 && (
+                                <div className="text-[10px] text-gray-500 font-bold flex items-center">+{product.availableColors.length - 4}</div>
+                              )}
                             </div>
                           </div>
                         </div>
