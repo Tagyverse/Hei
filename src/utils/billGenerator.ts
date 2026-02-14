@@ -156,9 +156,7 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Invoice - ${order.id}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=${s.font_family}:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * {
       margin: 0;
@@ -167,104 +165,10 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
     }
 
     body {
-      font-family: '${s.font_family}', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      padding: 20px;
-      background: #ffffff;
-    }
-
-    .invoice-container {
-      max-width: 210mm;
-      width: 100%;
-      min-height: auto;
-      margin: 0 auto;
-      background: white;
-      padding: 20px 30px;
-      border: 2px solid ${s.primary_color};
-      box-sizing: border-box;
-    }
-
-    @media screen and (min-width: 768px) {
-      .invoice-container {
-        width: 210mm;
-        min-height: 297mm;
-      }
-    }
-
-    .header {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-      border-bottom: 2px solid ${s.primary_color};
-      padding-bottom: 15px;
-      margin-bottom: 20px;
-      background: ${s.header_bg_color};
-    }
-
-    @media screen and (min-width: 768px) {
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 30px;
-      margin-bottom: 35px;
-      border-bottom: 3px solid ${s.primary_color};
-      padding-bottom: 25px;
-    }
-
-    .company-info {
-      display: flex;
-      gap: 20px;
-      align-items: flex-start;
-      flex: 1;
-    }
-
-    .company-logo {
-      width: 90px;
-      height: 90px;
-      object-fit: contain;
-      flex-shrink: 0;
-    }
-
-    .company-name {
-      font-size: ${s.header_font_size}px;
-      font-weight: 700;
-      color: ${s.primary_color};
-      margin-bottom: 8px;
-      letter-spacing: -0.5px;
-    }
-
-    .company-tagline {
-      font-size: ${s.body_font_size + 1}px;
-      color: ${s.secondary_color};
-      margin-bottom: 12px;
-      font-weight: 500;
-    }
-
-    .company-details {
-      font-size: ${s.body_font_size - 1}px;
-      color: ${s.secondary_color};
-      line-height: 1.8;
-    }
-
-    .company-details p {
-      margin: 2px 0;
-    }
-
-    .invoice-title {
-      text-align: right;
-      flex-shrink: 0;
-      min-width: 180px;
-    }
-
-    .invoice-title h1 {
-      font-size: 32px;
-      color: ${s.primary_color};
-      margin-bottom: 8px;
-      font-weight: 700;
-      letter-spacing: 2px;
-    }
-
-    .invoice-number {
+      margin: 0;
+      padding: 16px;
+      background: #f5f5f5;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       font-size: ${s.body_font_size}px;
       color: ${s.secondary_color};
       margin-bottom: 8px;
@@ -275,7 +179,6 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
       font-size: ${s.body_font_size}px;
       color: #888888;
       margin-bottom: 10px;
-    }
     }
 
     .company-info {
@@ -335,6 +238,13 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
       font-size: ${s.body_font_size}px;
       color: #666666;
       margin-top: 5px;
+    }
+
+    .item-details {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      width: 100%;
     }
 
     .product-image {
@@ -978,13 +888,23 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
           
           // Build image HTML with CORS support and proper error handling
           let imageHTML = '';
-          if (s.show_product_images && item.product_image) {
-            // Encode URL to handle special characters
-            const encodedImageUrl = item.product_image.includes('blob:') 
-              ? item.product_image 
-              : encodeURI(item.product_image);
-            
-            imageHTML = `<img src="${encodedImageUrl}" alt="${item.product_name}" class="product-image" crossorigin="anonymous" loading="eager" onload="this.style.opacity='1'" onerror="this.parentElement.style.gap='0'; this.remove();" style="opacity: 0.8;" />`;
+          // Always try to show images by default (show_product_images defaults to true)
+          const shouldShowImages = s.show_product_images !== false; // Default true if not explicitly false
+          if (shouldShowImages && item.product_image) {
+            try {
+              // Encode URL to handle special characters
+              const encodedImageUrl = item.product_image.includes('blob:') 
+                ? item.product_image 
+                : encodeURI(item.product_image);
+              
+              imageHTML = `<img src="${encodedImageUrl}" alt="${item.product_name}" class="product-image" crossorigin="anonymous" loading="eager" onload="this.style.opacity='1'" onerror="this.parentElement.style.gap='0'; this.remove();" style="opacity: 0.8;" />`;
+            } catch (e) {
+              console.warn('[v0] Error encoding image URL:', e);
+              // Fallback to direct URL if encoding fails
+              if (item.product_image) {
+                imageHTML = `<img src="${item.product_image}" alt="${item.product_name}" class="product-image" crossorigin="anonymous" loading="eager" onload="this.style.opacity='1'" onerror="this.parentElement.style.gap='0'; this.remove();" style="opacity: 0.8;" />`;
+              }
+            }
           }
 
           return `
@@ -1104,7 +1024,28 @@ async function createBillElement(order: Order, siteSettings: SiteSettings, shipp
 
 export async function downloadBillAsPDF(order: Order, siteSettings: SiteSettings, shippingCharge: number = 0, customSettings?: BillSettings): Promise<void> {
   try {
-    const tempDiv = await createBillElement(order, siteSettings, shippingCharge, customSettings);
+    // Load bill settings from localStorage or Firebase if not provided
+    let billSettings = customSettings;
+    if (!billSettings) {
+      try {
+        const saved = localStorage.getItem('billSettings');
+        if (saved) {
+          billSettings = JSON.parse(saved);
+        } else {
+          // Use default settings that ensure images show
+          billSettings = { show_product_images: true };
+        }
+      } catch (error) {
+        console.warn('Could not load bill settings:', error);
+        // Fallback to ensure images show
+        billSettings = { show_product_images: true };
+      }
+    } else if (!billSettings.show_product_images) {
+      // Ensure images are shown
+      billSettings.show_product_images = true;
+    }
+
+    const tempDiv = await createBillElement(order, siteSettings, shippingCharge, billSettings);
     const invoiceContainer = tempDiv.querySelector('.invoice-container') as HTMLElement;
 
     if (!invoiceContainer) {
@@ -1164,7 +1105,28 @@ export async function downloadBillAsPDF(order: Order, siteSettings: SiteSettings
 
 export async function downloadBillAsJPG(order: Order, siteSettings: SiteSettings, shippingCharge: number = 0, customSettings?: BillSettings): Promise<void> {
   try {
-    const tempDiv = await createBillElement(order, siteSettings, shippingCharge, customSettings);
+    // Load bill settings from localStorage or Firebase if not provided
+    let billSettings = customSettings;
+    if (!billSettings) {
+      try {
+        const saved = localStorage.getItem('billSettings');
+        if (saved) {
+          billSettings = JSON.parse(saved);
+        } else {
+          // Use default settings that ensure images show
+          billSettings = { show_product_images: true };
+        }
+      } catch (error) {
+        console.warn('Could not load bill settings:', error);
+        // Fallback to ensure images show
+        billSettings = { show_product_images: true };
+      }
+    } else if (!billSettings.show_product_images) {
+      // Ensure images are shown
+      billSettings.show_product_images = true;
+    }
+
+    const tempDiv = await createBillElement(order, siteSettings, shippingCharge, billSettings);
     const invoiceContainer = tempDiv.querySelector('.invoice-container') as HTMLElement;
 
     if (!invoiceContainer) {
@@ -1214,7 +1176,24 @@ export async function downloadBillAsJPG(order: Order, siteSettings: SiteSettings
 }
 
 export function printBill(order: Order, siteSettings: SiteSettings, shippingCharge: number = 0, customSettings?: BillSettings): void {
-  const billHTML = generateBillHTML(order, siteSettings, shippingCharge, customSettings);
+  // Ensure images are shown in print
+  let billSettings = customSettings;
+  if (!billSettings) {
+    try {
+      const saved = localStorage.getItem('billSettings');
+      if (saved) {
+        billSettings = JSON.parse(saved);
+      } else {
+        billSettings = { show_product_images: true };
+      }
+    } catch (error) {
+      billSettings = { show_product_images: true };
+    }
+  } else if (!billSettings.show_product_images) {
+    billSettings.show_product_images = true;
+  }
+
+  const billHTML = generateBillHTML(order, siteSettings, shippingCharge, billSettings);
 
   const printWindow = window.open('', '', 'height=1000,width=800');
   if (!printWindow) return;

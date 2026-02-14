@@ -3,7 +3,7 @@ import { ArrowLeft, CreditCard, Loader, Truck, Tag, X } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
-import { ref, push, update, get, query, orderByChild, equalTo } from 'firebase/database';
+import { ref, push, update, get, query, orderByChild, equalTo, set } from 'firebase/database';
 import PaymentSuccessDialog from '../components/PaymentSuccessDialog';
 import PaymentFailedDialog from '../components/PaymentFailedDialog';
 import PaymentCancelledDialog from '../components/PaymentCancelledDialog';
@@ -258,9 +258,21 @@ export default function Checkout({ onBack, onLoginClick }: CheckoutProps) {
         dispatch_details: ''
       };
 
-      const ordersRef = ref(db, 'orders');
-      const newOrderRef = await push(ordersRef, orderData);
-      const orderId = newOrderRef.key;
+      // Generate Amazon-style alphanumeric order ID with brand name
+      const generateOrderId = () => {
+        const timestamp = Date.now().toString(36).toUpperCase();
+        const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+        // Get brand name from site settings or use default
+        const brandName = siteSettings?.site_name?.toUpperCase().replace(/\s+/g, '') || 'PIXIEBLOOMS';
+        return `${brandName}-${timestamp}-${random}`;
+      };
+
+      const orderId = generateOrderId();
+      const orderData_withId = { ...orderData, id: orderId };
+
+      // Save order with custom alphanumeric ID as Firebase key
+      const ordersRef = ref(db, `orders/${orderId}`);
+      await set(ordersRef, orderData_withId);
 
       const apiUrl = '/api/create-payment-session';
 

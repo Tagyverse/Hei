@@ -67,9 +67,15 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
       const saved = localStorage.getItem('billSettings');
       if (saved) {
         setBillSettings(JSON.parse(saved));
+      } else {
+        // Set to null so billGenerator uses its default settings
+        // But we need to ensure images show - explicitly enable them
+        setBillSettings({ show_product_images: true });
       }
     } catch (error) {
       console.error('Error loading bill settings:', error);
+      // On error, use minimal settings that enable images
+      setBillSettings({ show_product_images: true });
     }
   };
 
@@ -95,6 +101,7 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
       if (ordersSnapshot.exists()) {
         const data = ordersSnapshot.val();
         Object.keys(data).forEach(key => {
+          // The key itself is now the custom alphanumeric order ID
           if (data[key].user_id === user.uid && data[key].payment_status === 'completed') {
             ordersData.push({ id: key, ...data[key] });
           }

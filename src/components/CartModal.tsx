@@ -10,6 +10,20 @@ interface CartModalProps {
 
 export default function CartModal({ isOpen, onClose, onCheckout }: CartModalProps) {
   const { items, updateQuantity, removeFromCart, subtotal, shippingCharge, taxAmount, total, getItemPrice, updateCartItem, taxSettings } = useCart();
+  
+  // Get free delivery threshold from bill settings or use default
+  const freeDeliveryThreshold = (() => {
+    try {
+      const saved = localStorage.getItem('billSettings');
+      if (saved) {
+        const settings = JSON.parse(saved);
+        return settings.free_delivery_minimum_amount || 2000;
+      }
+    } catch (error) {
+      console.warn('Could not load bill settings:', error);
+    }
+    return 2000;
+  })();
 
   if (!isOpen) return null;
 
@@ -117,20 +131,20 @@ export default function CartModal({ isOpen, onClose, onCheckout }: CartModalProp
 
         {items.length > 0 && (
           <div className="bg-white p-6 border-t-4 border-black flex-shrink-0">
-            {subtotal < 2000 && (
+            {subtotal < freeDeliveryThreshold && (
               <div className="mb-4 p-3 bg-[#B5E5CF] rounded-xl border-2 border-black">
                 <p className="text-sm font-bold text-black mb-1">
-                  Add ₹{(2000 - subtotal).toFixed(2)} more for FREE shipping!
+                  Add ₹{(freeDeliveryThreshold - subtotal).toFixed(2)} more for FREE shipping!
                 </p>
                 <div className="w-full bg-white rounded-full h-2 border-2 border-black">
                   <div
                     className="bg-black h-full rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min((subtotal / 2000) * 100, 100)}%` }}
+                    style={{ width: `${Math.min((subtotal / freeDeliveryThreshold) * 100, 100)}%` }}
                   ></div>
                 </div>
               </div>
             )}
-            {subtotal >= 2000 && (
+            {subtotal >= freeDeliveryThreshold && (
               <div className="mb-4 p-3 bg-[#B5E5CF] rounded-xl border-2 border-black">
                 <p className="text-sm font-bold text-black text-center">
                   You've unlocked FREE shipping!
@@ -145,7 +159,7 @@ export default function CartModal({ isOpen, onClose, onCheckout }: CartModalProp
               <div className="flex items-center justify-between text-black">
                 <span className="text-base font-medium">Shipping</span>
                 <span className="font-bold">
-                  {shippingCharge === 0 && subtotal >= 2000 ? 'FREE' : `₹${shippingCharge.toFixed(2)}`}
+                  {shippingCharge === 0 && subtotal >= freeDeliveryThreshold ? 'FREE' : `₹${shippingCharge.toFixed(2)}`}
                 </span>
               </div>
               {taxSettings?.is_enabled && !taxSettings?.include_in_price && taxAmount > 0 && (

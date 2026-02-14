@@ -21,41 +21,48 @@ function generateSampleData() {
   const now = Date.now();
   const todayStart = new Date().setHours(0, 0, 0, 0);
   
-  // Sample hourly data
-  const hourlyData = Array.from({ length: 24 }, (_, i) => ({
-    hour: `${i}:00`,
-    views: Math.floor(Math.random() * 50) + (i >= 9 && i <= 18 ? 30 : 10)
-  }));
+  // Sample hourly data with realistic traffic
+  const hourlyData = Array.from({ length: 24 }, (_, i) => {
+    let baseViews = 20;
+    if (i >= 8 && i <= 10) baseViews = 120; // Morning peak
+    if (i >= 12 && i <= 14) baseViews = 150; // Lunch peak
+    if (i >= 18 && i <= 22) baseViews = 180; // Evening peak
+    if (i < 6 || i >= 23) baseViews = 5; // Night traffic
+    return {
+      hour: `${String(i).padStart(2, '0')}:00`,
+      views: baseViews + Math.floor(Math.random() * 40)
+    };
+  });
   
-  // Sample weekly data
+  // Sample weekly data with realistic patterns
   const weeklyData = [
-    { day: 'Mon', views: Math.floor(Math.random() * 200) + 100, visitors: Math.floor(Math.random() * 80) + 40 },
-    { day: 'Tue', views: Math.floor(Math.random() * 200) + 100, visitors: Math.floor(Math.random() * 80) + 40 },
-    { day: 'Wed', views: Math.floor(Math.random() * 200) + 100, visitors: Math.floor(Math.random() * 80) + 40 },
-    { day: 'Thu', views: Math.floor(Math.random() * 200) + 100, visitors: Math.floor(Math.random() * 80) + 40 },
-    { day: 'Fri', views: Math.floor(Math.random() * 200) + 100, visitors: Math.floor(Math.random() * 80) + 40 },
-    { day: 'Sat', views: Math.floor(Math.random() * 150) + 80, visitors: Math.floor(Math.random() * 60) + 30 },
-    { day: 'Sun', views: Math.floor(Math.random() * 150) + 80, visitors: Math.floor(Math.random() * 60) + 30 },
+    { day: 'Mon', views: Math.floor(Math.random() * 300) + 800, visitors: Math.floor(Math.random() * 120) + 250 },
+    { day: 'Tue', views: Math.floor(Math.random() * 320) + 820, visitors: Math.floor(Math.random() * 130) + 260 },
+    { day: 'Wed', views: Math.floor(Math.random() * 310) + 810, visitors: Math.floor(Math.random() * 125) + 255 },
+    { day: 'Thu', views: Math.floor(Math.random() * 290) + 790, visitors: Math.floor(Math.random() * 115) + 245 },
+    { day: 'Fri', views: Math.floor(Math.random() * 400) + 900, visitors: Math.floor(Math.random() * 150) + 300 },
+    { day: 'Sat', views: Math.floor(Math.random() * 450) + 950, visitors: Math.floor(Math.random() * 170) + 350 },
+    { day: 'Sun', views: Math.floor(Math.random() * 380) + 880, visitors: Math.floor(Math.random() * 140) + 280 },
   ];
   
   return {
-    todayViews: Math.floor(Math.random() * 500) + 200,
-    todayVisitors: Math.floor(Math.random() * 150) + 80,
-    totalViews: Math.floor(Math.random() * 10000) + 5000,
-    uniqueVisitors: Math.floor(Math.random() * 3000) + 1500,
+    todayViews: Math.floor(Math.random() * 800) + 1200,
+    todayVisitors: Math.floor(Math.random() * 300) + 400,
+    totalViews: Math.floor(Math.random() * 50000) + 25000,
+    uniqueVisitors: Math.floor(Math.random() * 8000) + 5000,
     topPages: [
-      { path: '/', views: Math.floor(Math.random() * 500) + 300 },
-      { path: '/shop', views: Math.floor(Math.random() * 400) + 200 },
-      { path: '/categories', views: Math.floor(Math.random() * 300) + 150 },
-      { path: '/cart', views: Math.floor(Math.random() * 200) + 100 },
-      { path: '/checkout', views: Math.floor(Math.random() * 150) + 80 },
+      { path: '/', views: Math.floor(Math.random() * 2000) + 3500 },
+      { path: '/shop', views: Math.floor(Math.random() * 1800) + 2800 },
+      { path: '/categories', views: Math.floor(Math.random() * 1200) + 1800 },
+      { path: '/cart', views: Math.floor(Math.random() * 800) + 1200 },
+      { path: '/checkout', views: Math.floor(Math.random() * 600) + 900 },
     ],
     topCountries: [
-      { country: 'IN', visits: Math.floor(Math.random() * 2000) + 1000, flag: '🇮🇳' },
-      { country: 'US', visits: Math.floor(Math.random() * 500) + 200, flag: '🇺🇸' },
-      { country: 'GB', visits: Math.floor(Math.random() * 300) + 100, flag: '🇬🇧' },
-      { country: 'CA', visits: Math.floor(Math.random() * 200) + 80, flag: '🇨🇦' },
-      { country: 'AU', visits: Math.floor(Math.random() * 150) + 50, flag: '🇦🇺' },
+      { country: 'IN', visits: Math.floor(Math.random() * 8000) + 12000, flag: '🇮🇳' },
+      { country: 'US', visits: Math.floor(Math.random() * 2000) + 3000, flag: '🇺🇸' },
+      { country: 'GB', visits: Math.floor(Math.random() * 1500) + 2000, flag: '🇬🇧' },
+      { country: 'CA', visits: Math.floor(Math.random() * 1000) + 1500, flag: '🇨🇦' },
+      { country: 'AU', visits: Math.floor(Math.random() * 800) + 1200, flag: '🇦🇺' },
     ],
     hourlyData,
     weeklyData,

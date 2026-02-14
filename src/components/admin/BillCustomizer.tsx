@@ -43,6 +43,10 @@ interface BillSettings {
   from_state: string;
   from_pincode: string;
   from_phone: string;
+  
+  // Shipping Settings
+  free_delivery_minimum_amount?: number;
+  show_free_delivery_badge?: boolean;
 }
 
 const defaultSettings: BillSettings = {
