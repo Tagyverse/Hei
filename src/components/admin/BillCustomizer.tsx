@@ -3,6 +3,7 @@ import { FileText, Save, Eye, Upload, X, Type, Palette, Layout, Image as ImageIc
 import { db } from '../../lib/firebase';
 import { ref, get, set } from 'firebase/database';
 import R2ImageSelectorDialog from './R2ImageSelectorDialog';
+import { fetchDeliveryCharge } from '../../utils/billGenerator';
 
 interface BillSettings {
   // Header Settings
@@ -100,17 +101,36 @@ const layoutOptions = [
   { value: 'detailed', label: 'Detailed', description: 'Full information with all details' },
 ];
 
+const themeOptions = [
+  { value: 'professional', label: 'Professional', description: 'Corporate black & white' },
+  { value: 'modern', label: 'Modern', description: 'Blue contemporary design' },
+  { value: 'classic', label: 'Classic', description: 'Red traditional style' },
+  { value: 'minimal', label: 'Minimal', description: 'Clean & simple' },
+];
+
 export default function BillCustomizer() {
   const [settings, setSettings] = useState<BillSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showLogoGallery, setShowLogoGallery] = useState(false);
+  const [deliveryCharge, setDeliveryCharge] = useState<number>(0);
   const previewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadSettings();
+    loadDeliveryCharge();
   }, []);
+
+  const loadDeliveryCharge = async () => {
+    try {
+      const charge = await fetchDeliveryCharge(db);
+      setDeliveryCharge(charge);
+      console.log('[v0] Delivery charge loaded:', charge);
+    } catch (error) {
+      console.warn('[v0] Could not load delivery charge:', error);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -443,6 +463,36 @@ export default function BillCustomizer() {
                   placeholder="e.g., 22AAAAA0000A1Z5"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Theme Presets */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Palette className="w-5 h-5 text-teal-600" />
+              Design Themes
+            </h3>
+            
+            <div className="grid grid-cols-2 gap-3">
+              {themeOptions.map(option => (
+                <button
+                  key={option.value}
+                  onClick={() => {
+                    const BILL_THEMES: any = {
+                      professional: { primary_color: '#1a1a1a', secondary_color: '#666666', header_bg_color: '#1a1a1a', table_header_color: '#1a1a1a', header_font_size: 32, body_font_size: 12 },
+                      modern: { primary_color: '#2563eb', secondary_color: '#64748b', header_bg_color: '#2563eb', table_header_color: '#2563eb', header_font_size: 36, body_font_size: 13 },
+                      classic: { primary_color: '#c41e3a', secondary_color: '#333333', header_bg_color: '#c41e3a', table_header_color: '#c41e3a', header_font_size: 34, body_font_size: 12 },
+                      minimal: { primary_color: '#000000', secondary_color: '#777777', header_bg_color: '#ffffff', table_header_color: '#f0f0f0', header_font_size: 28, body_font_size: 11 },
+                    };
+                    const theme = BILL_THEMES[option.value];
+                    setSettings(prev => ({ ...prev, ...theme }));
+                  }}
+                  className="p-4 text-left rounded-lg border-2 border-gray-200 hover:border-teal-500 transition-all"
+                >
+                  <div className="font-semibold text-gray-900">{option.label}</div>
+                  <div className="text-xs text-gray-600 mt-1">{option.description}</div>
+                </button>
+              ))}
             </div>
           </div>
 

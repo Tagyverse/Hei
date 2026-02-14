@@ -48,6 +48,7 @@ interface BillSettings {
   company_email?: string;
   company_phone?: string;
   company_gst?: string;
+  theme?: 'professional' | 'modern' | 'classic' | 'minimal';
   layout_style?: 'modern' | 'classic' | 'minimal' | 'detailed';
   show_product_images?: boolean;
   show_shipping_label?: boolean;
@@ -71,35 +72,70 @@ interface BillSettings {
   show_free_delivery_badge?: boolean;
 }
 
+// Preset themes for bill design
+export const BILL_THEMES = {
+  professional: {
+    primary_color: '#1a1a1a',
+    secondary_color: '#666666',
+    header_bg_color: '#1a1a1a',
+    table_header_color: '#1a1a1a',
+    font_family: 'Arial, sans-serif',
+    header_font_size: 32,
+    body_font_size: 12,
+  },
+  modern: {
+    primary_color: '#2563eb',
+    secondary_color: '#64748b',
+    header_bg_color: '#2563eb',
+    table_header_color: '#2563eb',
+    font_family: 'Segoe UI, Tahoma, sans-serif',
+    header_font_size: 36,
+    body_font_size: 13,
+  },
+  classic: {
+    primary_color: '#c41e3a',
+    secondary_color: '#333333',
+    header_bg_color: '#c41e3a',
+    table_header_color: '#c41e3a',
+    font_family: 'Georgia, serif',
+    header_font_size: 34,
+    body_font_size: 12,
+  },
+  minimal: {
+    primary_color: '#000000',
+    secondary_color: '#777777',
+    header_bg_color: '#ffffff',
+    table_header_color: '#f0f0f0',
+    font_family: 'Helvetica, Arial, sans-serif',
+    header_font_size: 28,
+    body_font_size: 11,
+  },
+};
+
 const defaultBillSettings: BillSettings = {
   logo_url: '',
-  company_name: 'Pixie Blooms',
-  company_tagline: '',
+  company_name: 'Hei',
+  company_tagline: 'Quality Fashion & Accessories',
   company_address: 'Atchukattu Street, Thiruppathur',
-  company_email: 'pixieblooms2512@gmail.com',
+  company_email: 'support@hei.com',
   company_phone: '+91 9876543210',
   company_gst: '',
+  theme: 'professional',
   layout_style: 'modern',
   show_product_images: true,
   show_shipping_label: true,
-  show_cut_line: true,
-  primary_color: '#000000',
-  secondary_color: '#333333',
-  header_bg_color: '#ffffff',
-  table_header_color: '#000000',
-  font_family: 'Inter',
-  header_font_size: 24,
-  body_font_size: 12,
-  footer_text: 'This is a computer-generated invoice and does not require a signature.',
-  thank_you_message: 'Thank you for your business!',
-  from_name: 'Pixie Blooms',
+  show_cut_line: false,
+  ...BILL_THEMES.professional,
+  footer_text: 'Thank you for your order!',
+  thank_you_message: 'We appreciate your business.',
+  from_name: 'Hei',
   from_address: 'Atchukattu Street',
   from_city: 'Thiruppathur',
   from_state: 'Tamil Nadu',
-  from_pincode: '630211',
+  from_pincode: '635601',
   from_phone: '+91 9876543210',
-  free_delivery_minimum_amount: 2000,
-  show_free_delivery_badge: true,
+  free_delivery_minimum_amount: 0,
+  show_free_delivery_badge: false,
 };
 
 export function generateBillHTML(order: Order, siteSettings: SiteSettings, shippingCharge: number = 0, customSettings?: BillSettings): string {
@@ -1014,6 +1050,35 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
 </body>
 </html>
   `.trim();
+}
+
+// Apply theme to settings
+export function applyTheme(settings: BillSettings, themeName: keyof typeof BILL_THEMES): BillSettings {
+  const theme = BILL_THEMES[themeName];
+  return {
+    ...settings,
+    theme: themeName,
+    ...theme,
+  };
+}
+
+// Fetch delivery charge from database
+export async function fetchDeliveryCharge(db: any): Promise<number> {
+  try {
+    const { ref, get } = await import('firebase/database');
+    const settingsRef = ref(db, 'site_settings');
+    const snapshot = await get(settingsRef);
+    
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      const settingsId = Object.keys(data)[0];
+      const settings = data[settingsId];
+      return settings?.delivery_charge || 0;
+    }
+  } catch (error) {
+    console.warn('[v0] Could not fetch delivery charge:', error);
+  }
+  return 0;
 }
 
 async function createBillElement(order: Order, siteSettings: SiteSettings, shippingCharge: number = 0, customSettings?: BillSettings): Promise<HTMLDivElement> {

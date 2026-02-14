@@ -3,7 +3,7 @@ import { X, Package, CheckCircle, Clock, Truck, Loader, Download, Printer } from
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
 import { ref, get } from 'firebase/database';
-import { downloadBillAsPDF, downloadBillAsJPG, printBill } from '../utils/billGenerator';
+import { downloadBillAsPDF, downloadBillAsJPG, printBill, fetchDeliveryCharge } from '../utils/billGenerator';
 import { trackBillDownload } from '../utils/analytics';
 
 interface Order {
@@ -52,11 +52,13 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [downloadingJPG, setDownloadingJPG] = useState(false);
   const [billSettings, setBillSettings] = useState<any>(null);
+  const [deliveryCharge, setDeliveryCharge] = useState<number>(0);
 
   useEffect(() => {
     if (isOpen && user) {
       fetchOrders();
       loadBillSettings();
+      loadDeliveryCharge();
     }
   }, [isOpen, user]);
 
@@ -68,6 +70,16 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
       }
     } catch (error) {
       console.error('Error loading bill settings:', error);
+    }
+  };
+
+  const loadDeliveryCharge = async () => {
+    try {
+      const charge = await fetchDeliveryCharge(db);
+      setDeliveryCharge(charge);
+      console.log('[v0] Delivery charge loaded:', charge);
+    } catch (error) {
+      console.warn('[v0] Could not load delivery charge:', error);
     }
   };
 
@@ -144,7 +156,7 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
     if (!selectedOrder) return;
     setDownloadingPDF(true);
     try {
-      await downloadBillAsPDF(selectedOrder, { site_name: 'Hei', contact_email: '', contact_phone: '' }, 0, billSettings);
+      await downloadBillAsPDF(selectedOrder, { site_name: 'Hei', contact_email: '', contact_phone: '' }, deliveryCharge, billSettings);
       // Track download (fire and forget - don't block UI)
       trackBillDownload(selectedOrder.id, 'pdf');
     } catch (error) {
@@ -158,7 +170,7 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
     if (!selectedOrder) return;
     setDownloadingJPG(true);
     try {
-      await downloadBillAsJPG(selectedOrder, { site_name: 'Hei', contact_email: '', contact_phone: '' }, 0, billSettings);
+      await downloadBillAsJPG(selectedOrder, { site_name: 'Hei', contact_email: '', contact_phone: '' }, deliveryCharge, billSettings);
       // Track download (fire and forget - don't block UI)
       trackBillDownload(selectedOrder.id, 'jpg');
     } catch (error) {
@@ -170,7 +182,7 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
 
   const handlePrint = () => {
     if (!selectedOrder) return;
-    printBill(selectedOrder, { site_name: 'Hei', contact_email: '', contact_phone: '' }, 0, billSettings);
+    printBill(selectedOrder, { site_name: 'Hei', contact_email: '', contact_phone: '' }, deliveryCharge, billSettings);
     // Track download (fire and forget - don't block UI)
     trackBillDownload(selectedOrder.id, 'print');
   };
