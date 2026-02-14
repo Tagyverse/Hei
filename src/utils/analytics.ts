@@ -22,8 +22,10 @@ export async function trackPageView(path: string, metadata?: Record<string, any>
     const sessionId = getSessionId();
     const userId = localStorage.getItem('userId');
 
+    console.log('[v0] Tracking page view:', path);
+
     // Log to KV API endpoint (fire and forget)
-    fetch('/api/track-view', {
+    const response = fetch('/api/track-view', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -36,11 +38,19 @@ export async function trackPageView(path: string, metadata?: Record<string, any>
         timestamp: new Date().toISOString(),
         metadata,
       }),
-    }).catch(err => console.warn('[KV Analytics] Warning:', err));
+    });
 
-    console.log('[v0] Page view tracked:', path);
+    response
+      .then(res => {
+        if (res.ok) {
+          console.log('[v0] Page view recorded:', path);
+        } else {
+          console.warn('[v0] Page view track failed:', res.status);
+        }
+      })
+      .catch(err => console.warn('[v0] Page view track error:', err.message));
   } catch (error) {
-    console.warn('[Analytics] Warning:', error instanceof Error ? error.message : String(error));
+    console.warn('[v0] Page view error:', error instanceof Error ? error.message : String(error));
   }
 }
 
@@ -55,8 +65,10 @@ export async function trackEvent(
     const sessionId = getSessionId();
     const userId = localStorage.getItem('userId');
 
+    console.log('[v0] Tracking event:', eventType, eventData);
+
     // Log to KV API endpoint (fire and forget)
-    fetch('/api/track-event', {
+    const response = fetch('/api/track-event', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -68,11 +80,19 @@ export async function trackEvent(
         timestamp: new Date().toISOString(),
         data: eventData,
       }),
-    }).catch(err => console.warn('[KV Analytics] Warning:', err));
+    });
 
-    console.log('[v0] Event tracked:', eventType, eventData);
+    response
+      .then(res => {
+        if (res.ok) {
+          console.log('[v0] Event recorded:', eventType);
+        } else {
+          console.warn('[v0] Event track failed:', eventType, res.status);
+        }
+      })
+      .catch(err => console.warn('[v0] Event track error:', eventType, err.message));
   } catch (error) {
-    console.warn('[Analytics] Warning:', error instanceof Error ? error.message : String(error));
+    console.warn('[v0] Event error:', error instanceof Error ? error.message : String(error));
   }
 }
 
@@ -179,6 +199,9 @@ export async function trackPurchase(
  * Initialize analytics tracking
  */
 export function initAnalytics() {
+  console.log('[v0] Analytics initialized');
+
+  // Track initial page view
   trackPageView(window.location.pathname);
 
   let lastPath = window.location.pathname;
@@ -191,6 +214,7 @@ export function initAnalytics() {
   }, 1000);
 
   // Track user session start
+  console.log('[v0] Tracking session start');
   trackEvent('session_start', {
     user_agent: navigator.userAgent,
     language: navigator.language,
@@ -199,8 +223,11 @@ export function initAnalytics() {
   // Cleanup on page unload
   window.addEventListener('beforeunload', () => {
     clearInterval(checkPathInterval);
+    console.log('[v0] Tracking session end');
     trackEvent('session_end');
   });
+
+  console.log('[v0] Analytics ready - monitoring page changes');
 
   return { clearInterval };
 }
