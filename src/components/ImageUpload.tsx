@@ -63,13 +63,19 @@ export default function ImageUpload({ value, onChange, label = 'Image', classNam
         body: formData,
       });
 
+      const responseData = await response.json();
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
+        throw new Error(responseData.error || 'Upload failed');
       }
 
-      const { url } = await response.json();
-      onChange(url);
+      if (!responseData.url) {
+        console.warn('[v0] Upload response missing URL:', responseData);
+        throw new Error('Upload returned no URL');
+      }
+
+      console.log('[v0] Image uploaded successfully:', responseData.fileName);
+      onChange(responseData.url);
     } catch (err) {
       console.error('Upload error:', err);
       setError(err instanceof Error ? err.message : 'Failed to upload image');

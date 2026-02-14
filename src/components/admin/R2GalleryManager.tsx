@@ -117,7 +117,13 @@ export default function R2GalleryManager({
       const selectedUrls = images
         .filter(img => newSelection.has(img.key))
         .map(img => img.url);
-      onSelectImages(selectedUrls);
+      
+      // Ensure we pass the URLs correctly
+      if (maxSelections === 1) {
+        onSelectImages(selectedUrls.length > 0 ? [selectedUrls[selectedUrls.length - 1]] : []);
+      } else {
+        onSelectImages(selectedUrls);
+      }
     }
   };
 

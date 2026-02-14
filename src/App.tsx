@@ -32,7 +32,7 @@ const Contact = lazy(() => import('./pages/Contact'));
 import type { Product } from './types';
 import { db } from './lib/firebase';
 import { ref, get, onValue } from 'firebase/database';
-import { initAnalytics } from './utils/analytics';
+import { initAnalytics, trackView } from './utils/analytics';
 import { initPerformanceMonitoring } from './utils/performanceMonitoring';
 import { initFetchInterceptor } from './utils/fetchInterceptor';
 import { enableSmoothScrollCSS } from './utils/smoothScroll';
@@ -173,9 +173,10 @@ function AppContent() {
     if (categoryId && page === 'shop') {
       path += `?category=${categoryId}`;
     }
-    window.history.pushState({}, '', path);
+    window.history.pushState({}, "", path);
+    trackView(path);
 
-    if (categoryId && page === 'shop') {
+    if (categoryId && page === "shop") {
       setTimeout(() => {
         const productsSection = document.getElementById('products-section');
         if (productsSection) {
@@ -233,8 +234,12 @@ function AppContent() {
       window.scrollTo(0, 0);
     };
 
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener("popstate", handlePopState);
+
+    // Track initial page view
+    trackView(window.location.pathname + window.location.search);
+
+    return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
   const renderPage = () => {

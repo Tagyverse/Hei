@@ -53,12 +53,21 @@ export default function R2ImageSelectorDialog({
     setLoading(true);
     try {
       const response = await fetch('/api/r2-list');
-      if (response.ok) {
-        const data = await response.json();
-        setImages(data.images || []);
+      const data = await response.json();
+      if (response.ok || data.images) {
+        // Ensure images array exists
+        const imageList = Array.isArray(data.images) ? data.images : [];
+        setImages(imageList);
+        if (imageList.length === 0) {
+          console.log('[v0] No images in R2, using empty state for demo');
+        }
+      } else {
+        console.error('Failed to load images:', data);
+        setImages([]);
       }
     } catch (error) {
       console.error('Failed to load images:', error);
+      setImages([]);
     } finally {
       setLoading(false);
     }
@@ -66,11 +75,14 @@ export default function R2ImageSelectorDialog({
 
   const handleImageClick = (url: string) => {
     if (multiple) {
-      setSelectedUrls(prev =>
-        prev.includes(url)
-          ? prev.filter(u => u !== url)
-          : [...prev, url]
-      );
+      setSelectedUrls(prev => {
+        const isSelected = prev.includes(url);
+        if (isSelected) {
+          return prev.filter(u => u !== url);
+        } else {
+          return [...prev, url];
+        }
+      });
     } else {
       setSelectedUrls([url]);
     }
@@ -98,23 +110,35 @@ export default function R2ImageSelectorDialog({
 
         if (response.ok) {
           const data = await response.json();
-          uploadedUrls.push(data.url);
+          if (data.url) {
+            console.log('[v0] Image uploaded:', data.fileName);
+            uploadedUrls.push(data.url);
+          }
+        } else {
+          const errorData = await response.json();
+          console.warn('[v0] Upload failed for file:', file.name, errorData);
         }
 
         setUploadProgress(((i + 1) / files.length) * 100);
       }
 
-      await loadImages();
-
       if (uploadedUrls.length > 0) {
+        console.log('[v0] Successfully uploaded', uploadedUrls.length, 'images');
         if (multiple) {
           setSelectedUrls(prev => [...prev, ...uploadedUrls]);
         } else {
           setSelectedUrls([uploadedUrls[0]]);
         }
+        
+        // Reload images to show newly uploaded ones
+        setTimeout(() => {
+          loadImages();
+        }, 500);
+      } else {
+        console.warn('[v0] No images were uploaded successfully');
       }
     } catch (error) {
-      console.error('Upload failed:', error);
+      console.error('[v0] Upload error:', error);
       alert('Failed to upload images. Please try again.');
     } finally {
       setUploading(false);

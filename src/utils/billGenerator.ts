@@ -893,9 +893,14 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
           if (shouldShowImages && item.product_image) {
             try {
               // Encode URL to handle special characters
-              const encodedImageUrl = item.product_image.includes('blob:') 
+              let encodedImageUrl = item.product_image.includes('blob:') 
                 ? item.product_image 
                 : encodeURI(item.product_image);
+              
+              // If it's an R2 image via our API, we might need to make it absolute for html2canvas
+              if (encodedImageUrl.startsWith('/api/')) {
+                encodedImageUrl = window.location.origin + encodedImageUrl;
+              }
               
               imageHTML = `<img src="${encodedImageUrl}" alt="${item.product_name}" class="product-image" crossorigin="anonymous" loading="eager" onload="this.style.opacity='1'" onerror="this.parentElement.style.gap='0'; this.remove();" style="opacity: 0.8;" />`;
             } catch (e) {

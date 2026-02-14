@@ -343,11 +343,18 @@ export default function Admin() {
       name: formData.name,
       description: formData.description,
       price: Number(formData.price),
-      image_url: formData.image_url,
+      image_url: formData.image_url || null,
       category_ids: formData.category_ids,
       in_stock: formData.in_stock,
       createdAt: editingProduct ? editingProduct.createdAt : new Date().toISOString()
     };
+    
+    // Debug logging
+    if (formData.image_url) {
+      console.log('[v0] Saving product with image_url:', formData.image_url);
+    } else {
+      console.warn('[v0] Product has no image_url');
+    }
 
     if (formData.compare_at_price && formData.compare_at_price > 0) {
       productData.compare_at_price = Number(formData.compare_at_price);
@@ -418,7 +425,7 @@ export default function Admin() {
     try {
       if (editingProduct) {
         const productRef = ref(db, `products/${editingProduct.id}`);
-        await update(productRef, productData);
+        await set(productRef, productData);
       } else {
         const productsRef = ref(db, 'products');
         await push(productsRef, productData);
@@ -561,7 +568,7 @@ export default function Admin() {
     try {
       if (editingCategory) {
         const categoryRef = ref(db, `categories/${editingCategory.id}`);
-        await update(categoryRef, categoryData);
+        await set(categoryRef, categoryData);
       } else {
         const categoriesRef = ref(db, 'categories');
         await push(categoriesRef, categoryData);

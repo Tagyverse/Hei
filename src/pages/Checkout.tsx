@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, CreditCard, Loader, Truck, Tag, X } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
+import { usePublishedData } from '../contexts/PublishedDataContext';
 import { db } from '../lib/firebase';
 import { ref, push, update, get, query, orderByChild, equalTo, set } from 'firebase/database';
 import PaymentSuccessDialog from '../components/PaymentSuccessDialog';
@@ -24,6 +25,8 @@ declare global {
 export default function Checkout({ onBack, onLoginClick }: CheckoutProps) {
   const { items, subtotal, shippingCharge, taxAmount, total, clearCart, getItemPrice, taxSettings } = useCart();
   const { user } = useAuth();
+  const { data: publishedData } = usePublishedData();
+  const siteSettings = publishedData?.site_settings ? Object.values(publishedData.site_settings)[0] : null;
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showFailed, setShowFailed] = useState(false);
