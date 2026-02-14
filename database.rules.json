@@ -764,6 +764,11 @@
       }
     },
 
+    "navigation_settings": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+
     "navigation": {
       ".read": true,
       "tabs": {

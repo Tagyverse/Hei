@@ -340,11 +340,12 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
     .product-image {
       width: 60px;
       height: 60px;
+      min-width: 60px;
       object-fit: cover;
-      border: 2px solid #e0e0e0;
-      border-radius: 6px;
-      background: #f9f9f9;
-      display: block;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #fafafa;
+      display: inline-block;
       flex-shrink: 0;
     }
 
@@ -976,15 +977,11 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
           if (item.selected_color) details.push(`Color: ${item.selected_color}`);
           const detailsHTML = details.length > 0 ? `<span>${details.join(' • ')}</span>` : '';
           
-          // Build image HTML with CORS support and proper error handling
+          // Build image HTML with proper CORS and loading handling
           let imageHTML = '';
           if (s.show_product_images && item.product_image) {
-            // Encode URL to handle special characters
-            const encodedImageUrl = item.product_image.includes('blob:') 
-              ? item.product_image 
-              : encodeURI(item.product_image);
-            
-            imageHTML = `<img src="${encodedImageUrl}" alt="${item.product_name}" class="product-image" crossorigin="anonymous" loading="eager" onload="this.style.opacity='1'" onerror="this.parentElement.style.gap='0'; this.remove();" style="opacity: 0.8;" />`;
+            const imageUrl = item.product_image;
+            imageHTML = `<img src="${imageUrl}" alt="${item.product_name}" class="product-image" crossorigin="anonymous" loading="eager" />`;
           }
 
           return `
