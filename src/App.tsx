@@ -120,6 +120,19 @@ function AppContent() {
     // Initialize performance monitoring
     initPerformanceMonitoring();
 
+    // Load bill settings from Firebase and cache in localStorage
+    const loadBillSettings = async () => {
+      try {
+        const billSettingsRef = ref(db, 'bill_settings');
+        const snapshot = await get(billSettingsRef);
+        if (snapshot.exists()) {
+          localStorage.setItem('billSettings', JSON.stringify(snapshot.val()));
+        }
+      } catch (error) {
+        console.error('Error loading bill settings:', error);
+      }
+    };
+
     const checkStoreStatus = async () => {
       try {
         const settingsRef = ref(db, 'site_settings');
@@ -145,6 +158,7 @@ function AppContent() {
     });
 
     checkStoreStatus();
+    loadBillSettings();
     const interval = setInterval(checkStoreStatus, 30000);
     return () => {
       clearInterval(interval);

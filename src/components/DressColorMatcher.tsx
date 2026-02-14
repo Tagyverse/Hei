@@ -345,24 +345,24 @@ export default function DressColorMatcher({ isOpen, onClose, currentProduct }: D
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-end md:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-end md:items-center justify-center p-2 sm:p-4">
       <div className="bg-white rounded-t-3xl md:rounded-3xl shadow-2xl max-w-5xl w-full h-[95vh] md:h-auto md:max-h-[92vh] overflow-hidden flex flex-col">
         {/* Material Design Header */}
-        <div className="bg-gradient-to-r from-pink-500 to-rose-500 p-4 sm:p-5 md:p-6 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3 md:gap-4 flex-1">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/40">
-              <Palette className="w-5 h-5 md:w-6 md:h-6 text-white" />
+        <div className="bg-gradient-to-r from-pink-500 to-rose-500 p-3 sm:p-4 md:p-6 flex items-start md:items-center justify-between gap-3 shrink-0 flex-wrap">
+          <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/40 flex-shrink-0">
+              <Palette className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" />
             </div>
-            <div className="flex-1">
-              <h2 className="text-base sm:text-lg md:text-2xl font-bold text-white leading-tight">Dress Color Matcher</h2>
-              <p className="text-white/80 text-xs sm:text-sm font-medium hidden sm:block">Find perfect matching pieces for your outfit</p>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-sm sm:text-base md:text-2xl font-bold text-white leading-tight truncate">Dress Color Matcher</h2>
+              <p className="text-white/80 text-xs sm:text-sm font-medium hidden sm:block truncate">Find perfect matching pieces</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="flex-shrink-0 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 border border-white/40"
+            className="flex-shrink-0 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 border border-white/40"
           >
-            <X className="w-5 h-5 sm:w-6 sm:h-6" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
           </button>
         </div>
 

@@ -48,6 +48,7 @@ interface BillSettings {
   company_email?: string;
   company_phone?: string;
   company_gst?: string;
+  theme?: 'professional' | 'modern' | 'classic' | 'minimal';
   layout_style?: 'modern' | 'classic' | 'minimal' | 'detailed';
   show_product_images?: boolean;
   show_shipping_label?: boolean;
@@ -71,35 +72,70 @@ interface BillSettings {
   show_free_delivery_badge?: boolean;
 }
 
+// Preset themes for bill design
+export const BILL_THEMES = {
+  professional: {
+    primary_color: '#1a1a1a',
+    secondary_color: '#666666',
+    header_bg_color: '#1a1a1a',
+    table_header_color: '#1a1a1a',
+    font_family: 'Arial, sans-serif',
+    header_font_size: 32,
+    body_font_size: 12,
+  },
+  modern: {
+    primary_color: '#2563eb',
+    secondary_color: '#64748b',
+    header_bg_color: '#2563eb',
+    table_header_color: '#2563eb',
+    font_family: 'Segoe UI, Tahoma, sans-serif',
+    header_font_size: 36,
+    body_font_size: 13,
+  },
+  classic: {
+    primary_color: '#c41e3a',
+    secondary_color: '#333333',
+    header_bg_color: '#c41e3a',
+    table_header_color: '#c41e3a',
+    font_family: 'Georgia, serif',
+    header_font_size: 34,
+    body_font_size: 12,
+  },
+  minimal: {
+    primary_color: '#000000',
+    secondary_color: '#777777',
+    header_bg_color: '#ffffff',
+    table_header_color: '#f0f0f0',
+    font_family: 'Helvetica, Arial, sans-serif',
+    header_font_size: 28,
+    body_font_size: 11,
+  },
+};
+
 const defaultBillSettings: BillSettings = {
   logo_url: '',
-  company_name: 'Pixie Blooms',
-  company_tagline: '',
+  company_name: 'Hei',
+  company_tagline: 'Quality Fashion & Accessories',
   company_address: 'Atchukattu Street, Thiruppathur',
-  company_email: 'pixieblooms2512@gmail.com',
+  company_email: 'support@hei.com',
   company_phone: '+91 9876543210',
   company_gst: '',
+  theme: 'professional',
   layout_style: 'modern',
   show_product_images: true,
   show_shipping_label: true,
-  show_cut_line: true,
-  primary_color: '#000000',
-  secondary_color: '#333333',
-  header_bg_color: '#ffffff',
-  table_header_color: '#000000',
-  font_family: 'Inter',
-  header_font_size: 24,
-  body_font_size: 12,
-  footer_text: 'This is a computer-generated invoice and does not require a signature.',
-  thank_you_message: 'Thank you for your business!',
-  from_name: 'Pixie Blooms',
+  show_cut_line: false,
+  ...BILL_THEMES.professional,
+  footer_text: 'Thank you for your order!',
+  thank_you_message: 'We appreciate your business.',
+  from_name: 'Hei',
   from_address: 'Atchukattu Street',
   from_city: 'Thiruppathur',
   from_state: 'Tamil Nadu',
-  from_pincode: '630211',
+  from_pincode: '635601',
   from_phone: '+91 9876543210',
-  free_delivery_minimum_amount: 2000,
-  show_free_delivery_badge: true,
+  free_delivery_minimum_amount: 0,
+  show_free_delivery_badge: false,
 };
 
 export function generateBillHTML(order: Order, siteSettings: SiteSettings, shippingCharge: number = 0, customSettings?: BillSettings): string {
@@ -165,11 +201,81 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
     }
 
     @media screen and (min-width: 768px) {
-      .header {
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: start;
-      }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 30px;
+      margin-bottom: 35px;
+      border-bottom: 3px solid ${s.primary_color};
+      padding-bottom: 25px;
+    }
+
+    .company-info {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      flex: 1;
+    }
+
+    .company-logo {
+      width: 90px;
+      height: 90px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    .company-name {
+      font-size: ${s.header_font_size}px;
+      font-weight: 700;
+      color: ${s.primary_color};
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .company-tagline {
+      font-size: ${s.body_font_size + 1}px;
+      color: ${s.secondary_color};
+      margin-bottom: 12px;
+      font-weight: 500;
+    }
+
+    .company-details {
+      font-size: ${s.body_font_size - 1}px;
+      color: ${s.secondary_color};
+      line-height: 1.8;
+    }
+
+    .company-details p {
+      margin: 2px 0;
+    }
+
+    .invoice-title {
+      text-align: right;
+      flex-shrink: 0;
+      min-width: 180px;
+    }
+
+    .invoice-title h1 {
+      font-size: 32px;
+      color: ${s.primary_color};
+      margin-bottom: 8px;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+
+    .invoice-number {
+      font-size: ${s.body_font_size}px;
+      color: ${s.secondary_color};
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .order-date {
+      font-size: ${s.body_font_size}px;
+      color: #888888;
+      margin-bottom: 10px;
+    }
     }
 
     .company-info {
@@ -232,17 +338,20 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
     }
 
     .product-image {
-      width: 50px;
-      height: 50px;
+      width: 60px;
+      height: 60px;
       object-fit: cover;
-      border: 1px solid #cccccc;
-      border-radius: 4px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      background: #f9f9f9;
+      display: block;
+      flex-shrink: 0;
     }
 
     .items-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 20px;
+      margin: 25px 0;
       font-size: ${s.body_font_size}px;
     }
 
@@ -252,12 +361,13 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
     }
 
     .items-table th {
-      padding: 10px 8px;
+      padding: 14px 10px;
       text-align: left;
-      font-size: ${s.body_font_size - 1}px;
-      font-weight: 600;
+      font-size: ${s.body_font_size}px;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 1px;
+      border: none;
     }
 
     .items-table th:last-child,
@@ -266,7 +376,8 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
     }
 
     .items-table tbody tr {
-      border-bottom: 1px solid #cccccc;
+      border-bottom: 1px solid #e8e8e8;
+      transition: background 0.2s ease;
     }
 
     .items-table tbody tr:last-child {
@@ -274,7 +385,7 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
     }
 
     .items-table td {
-      padding: 10px 8px;
+      padding: 14px 10px;
       font-size: ${s.body_font_size}px;
       color: ${s.secondary_color};
       vertical-align: middle;
@@ -282,16 +393,30 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
 
     .item-details {
       display: flex;
-      align-items: center;
-      gap: 10px;
+      align-items: flex-start;
+      gap: 12px;
     }
 
     .item-info {
       flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .item-info strong {
+      font-weight: 700;
+      color: ${s.primary_color};
+      margin-bottom: 4px;
+    }
+
+    .item-info span {
+      font-size: ${s.body_font_size - 1}px;
+      color: #999;
     }
 
     .items-table tbody tr:hover {
-      background: #f5f5f5;
+      background: #f9f9f9;
     }
 
     .totals {
@@ -400,47 +525,381 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
     }
 
     .shipping-labels {
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 20px;
-      margin-top: 15px;
+      margin-top: 30px;
     }
 
-    @media screen and (min-width: 768px) {
+    @media screen and (max-width: 768px) {
       .shipping-labels {
-        flex-direction: row;
+        grid-template-columns: 1fr;
       }
     }
 
     .label-box {
-      flex: 1;
       border: 2px solid ${s.primary_color};
-      padding: 15px;
+      padding: 20px;
       background: #ffffff;
+      border-radius: 4px;
     }
 
     .label-box h3 {
-      font-size: 12px;
+      font-size: 13px;
       color: ${s.primary_color};
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 10px;
+      letter-spacing: 1.5px;
+      margin-bottom: 15px;
       font-weight: 700;
       border-bottom: 2px solid ${s.primary_color};
-      padding-bottom: 5px;
+      padding-bottom: 10px;
     }
 
     .label-box p {
-      font-size: 11px;
-      color: ${s.primary_color};
-      line-height: 1.6;
-      margin-bottom: 4px;
-      font-weight: 600;
+      font-size: 12px;
+      color: ${s.secondary_color};
+      line-height: 1.8;
+      margin: 0 0 6px 0;
     }
 
     .label-box strong {
       color: ${s.primary_color};
       font-weight: 700;
+      display: block;
+      margin-top: 2px;
+    }
+
+    @media screen and (max-width: 768px) {
+      .invoice-container {
+        padding: 16px 20px;
+        border: 2px solid ${s.primary_color};
+      }
+
+      .header {
+        flex-direction: column;
+        gap: 20px;
+        padding-bottom: 20px;
+        margin-bottom: 25px;
+      }
+
+      .company-info {
+        width: 100%;
+      }
+
+      .company-logo {
+        width: 70px;
+        height: 70px;
+      }
+
+      .company-name {
+        font-size: 22px;
+      }
+
+      .invoice-title {
+        text-align: left;
+        width: 100%;
+        min-width: auto;
+      }
+
+      .invoice-title h1 {
+        font-size: 24px;
+        margin-bottom: 6px;
+      }
+
+      .items-table {
+        font-size: 12px;
+        margin: 20px 0;
+      }
+
+      .items-table th {
+        padding: 12px 8px;
+        font-size: 11px;
+      }
+
+      .items-table td {
+        padding: 12px 8px;
+        font-size: 12px;
+      }
+
+      .product-image {
+        width: 50px;
+        height: 50px;
+      }
+
+      .item-details {
+        gap: 10px;
+      }
+
+      .item-info strong {
+        margin-bottom: 3px;
+      }
+
+      .totals {
+        max-width: 100%;
+        margin-top: 20px;
+      }
+
+      .total-row {
+        padding: 10px 0;
+        font-size: 13px;
+      }
+
+      .total-row.grand-total {
+        padding: 12px 15px;
+        font-size: 15px;
+      }
+
+      .thank-you {
+        margin-top: 20px;
+        font-size: 13px;
+      }
+
+      .shipping-labels {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        margin-top: 25px;
+      }
+
+      .label-box {
+        padding: 16px;
+      }
+
+      .label-box h3 {
+        font-size: 12px;
+        margin-bottom: 12px;
+      }
+
+      .label-box p {
+        font-size: 11px;
+        line-height: 1.7;
+        margin: 0 0 5px 0;
+      }
+
+      .footer {
+        margin-top: 20px;
+        padding-top: 15px;
+        font-size: 10px;
+      }
+
+      .cut-line {
+        margin: 20px 0 15px 0;
+      }
+    }
+
+    @media screen and (max-width: 480px) {
+      .invoice-container {
+        padding: 12px 16px;
+        border: 1px solid ${s.primary_color};
+      }
+
+      .header {
+        gap: 16px;
+        padding-bottom: 16px;
+        margin-bottom: 20px;
+      }
+
+      .company-logo {
+        width: 60px;
+        height: 60px;
+      }
+
+      .company-name {
+        font-size: 18px;
+      }
+
+      .company-details {
+        font-size: 10px;
+      }
+
+      .invoice-title h1 {
+        font-size: 20px;
+      }
+
+      .invoice-number {
+        font-size: 11px;
+      }
+
+      .items-table {
+        font-size: 10px;
+        margin: 15px 0;
+      }
+
+      .items-table th {
+        padding: 10px 6px;
+        font-size: 9px;
+        letter-spacing: 0.5px;
+      }
+
+      .items-table td {
+        padding: 10px 6px;
+        font-size: 10px;
+      }
+
+      .product-image {
+        width: 45px;
+        height: 45px;
+      }
+
+      .item-details {
+        gap: 8px;
+      }
+
+      .item-info strong {
+        font-size: 10px;
+      }
+
+      .item-info span {
+        font-size: 9px;
+      }
+
+      .totals {
+        margin-top: 15px;
+      }
+
+      .total-row {
+        padding: 8px 0;
+        font-size: 11px;
+      }
+
+      .total-row.grand-total {
+        padding: 10px 12px;
+        font-size: 12px;
+      }
+
+      .thank-you {
+        margin-top: 15px;
+        font-size: 11px;
+      }
+
+      .shipping-labels {
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .label-box {
+        padding: 12px;
+      }
+
+      .label-box h3 {
+        font-size: 11px;
+        margin-bottom: 10px;
+      }
+
+      .label-box p {
+        font-size: 10px;
+        line-height: 1.6;
+        margin: 0 0 3px 0;
+      }
+
+      .footer {
+        margin-top: 15px;
+        padding-top: 12px;
+        font-size: 9px;
+      }
+
+      .cut-line {
+        margin: 15px 0 12px 0;
+      }
+    }
+
+      .header {
+        flex-direction: column;
+        gap: 12px;
+        padding-bottom: 12px;
+        margin-bottom: 15px;
+      }
+
+      .company-info {
+        width: 100%;
+      }
+
+      .invoice-title {
+        text-align: left;
+        width: 100%;
+      }
+
+      .invoice-title h1 {
+        font-size: 20px;
+        margin-bottom: 3px;
+      }
+
+      .items-table {
+        font-size: 11px;
+        margin-bottom: 15px;
+      }
+
+      .items-table th {
+        padding: 8px 4px;
+        font-size: 10px;
+      }
+
+      .items-table td {
+        padding: 8px 4px;
+        font-size: 11px;
+      }
+
+      .product-image {
+        width: 40px;
+        height: 40px;
+      }
+
+      .item-details {
+        gap: 8px;
+      }
+
+      .item-info {
+        font-size: 11px;
+      }
+
+      .totals {
+        max-width: 100%;
+        margin-top: 10px;
+      }
+
+      .total-row {
+        padding: 6px 0;
+        font-size: 12px;
+      }
+
+      .total-row.grand-total {
+        padding: 10px 12px;
+        font-size: 14px;
+      }
+
+      .thank-you {
+        margin-top: 12px;
+        font-size: 12px;
+      }
+
+      .shipping-labels {
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      .label-box {
+        padding: 12px;
+      }
+
+      .label-box h3 {
+        font-size: 11px;
+        margin-bottom: 8px;
+      }
+
+      .label-box p {
+        font-size: 10px;
+        margin-bottom: 3px;
+      }
+
+      .footer {
+        margin-top: 12px;
+        padding-top: 10px;
+        font-size: 9px;
+      }
+
+      .cut-line {
+        margin: 12px 0 10px 0;
+      }
     }
 
     @media print {
@@ -515,15 +974,27 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
           const details = [];
           if (item.selected_size) details.push(`Size: ${item.selected_size}`);
           if (item.selected_color) details.push(`Color: ${item.selected_color}`);
-          const detailsText = details.length > 0 ? `<br/><span style="font-size: 10px; color: #666;">${details.join(' • ')}</span>` : '';
+          const detailsHTML = details.length > 0 ? `<span>${details.join(' • ')}</span>` : '';
+          
+          // Build image HTML with CORS support and proper error handling
+          let imageHTML = '';
+          if (s.show_product_images && item.product_image) {
+            // Encode URL to handle special characters
+            const encodedImageUrl = item.product_image.includes('blob:') 
+              ? item.product_image 
+              : encodeURI(item.product_image);
+            
+            imageHTML = `<img src="${encodedImageUrl}" alt="${item.product_name}" class="product-image" crossorigin="anonymous" loading="eager" onload="this.style.opacity='1'" onerror="this.parentElement.style.gap='0'; this.remove();" style="opacity: 0.8;" />`;
+          }
 
           return `
           <tr>
             <td>
               <div class="item-details">
-                ${s.show_product_images && item.product_image ? `<img src="${item.product_image}" alt="${item.product_name}" class="product-image" crossorigin="anonymous" />` : ''}
+                ${imageHTML}
                 <div class="item-info">
-                  <strong>${item.product_name}</strong>${detailsText}
+                  <strong>${item.product_name}</strong>
+                  ${detailsHTML}
                 </div>
               </div>
             </td>
@@ -589,6 +1060,35 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
   `.trim();
 }
 
+// Apply theme to settings
+export function applyTheme(settings: BillSettings, themeName: keyof typeof BILL_THEMES): BillSettings {
+  const theme = BILL_THEMES[themeName];
+  return {
+    ...settings,
+    theme: themeName,
+    ...theme,
+  };
+}
+
+// Fetch delivery charge from database
+export async function fetchDeliveryCharge(db: any): Promise<number> {
+  try {
+    const { ref, get } = await import('firebase/database');
+    const settingsRef = ref(db, 'site_settings');
+    const snapshot = await get(settingsRef);
+    
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      const settingsId = Object.keys(data)[0];
+      const settings = data[settingsId];
+      return settings?.delivery_charge || 0;
+    }
+  } catch (error) {
+    console.warn('[v0] Could not fetch delivery charge:', error);
+  }
+  return 0;
+}
+
 async function createBillElement(order: Order, siteSettings: SiteSettings, shippingCharge: number = 0, customSettings?: BillSettings): Promise<HTMLDivElement> {
   const billHTML = generateBillHTML(order, siteSettings, shippingCharge, customSettings);
 
@@ -611,11 +1111,26 @@ export async function downloadBillAsPDF(order: Order, siteSettings: SiteSettings
       throw new Error('Invoice container not found');
     }
 
+    // Wait for images to load
+    const images = invoiceContainer.querySelectorAll('img');
+    await Promise.all(Array.from(images).map(img => {
+      return new Promise((resolve) => {
+        if (img.complete) {
+          resolve(true);
+        } else {
+          img.onload = () => resolve(true);
+          img.onerror = () => resolve(false);
+        }
+      });
+    }));
+
     const canvas = await html2canvas(invoiceContainer, {
       scale: 2,
       backgroundColor: '#ffffff',
       logging: false,
-      useCORS: true
+      useCORS: true,
+      allowTaint: true,
+      imageTimeout: 5000
     });
 
     const imgWidth = 210;
@@ -656,11 +1171,26 @@ export async function downloadBillAsJPG(order: Order, siteSettings: SiteSettings
       throw new Error('Invoice container not found');
     }
 
+    // Wait for images to load
+    const images = invoiceContainer.querySelectorAll('img');
+    await Promise.all(Array.from(images).map(img => {
+      return new Promise((resolve) => {
+        if (img.complete) {
+          resolve(true);
+        } else {
+          img.onload = () => resolve(true);
+          img.onerror = () => resolve(false);
+        }
+      });
+    }));
+
     const canvas = await html2canvas(invoiceContainer, {
       scale: 2,
       backgroundColor: '#ffffff',
       logging: false,
-      useCORS: true
+      useCORS: true,
+      allowTaint: true,
+      imageTimeout: 5000
     });
 
     canvas.toBlob((blob) => {
@@ -686,14 +1216,53 @@ export async function downloadBillAsJPG(order: Order, siteSettings: SiteSettings
 export function printBill(order: Order, siteSettings: SiteSettings, shippingCharge: number = 0, customSettings?: BillSettings): void {
   const billHTML = generateBillHTML(order, siteSettings, shippingCharge, customSettings);
 
-  const printWindow = window.open('', '_blank');
-  if (printWindow) {
-    printWindow.document.write(billHTML);
-    printWindow.document.close();
+  const printWindow = window.open('', '', 'height=1000,width=800');
+  if (!printWindow) return;
 
-    printWindow.onload = () => {
-      printWindow.focus();
-      printWindow.print();
-    };
-  }
+  printWindow.document.write(billHTML);
+  printWindow.document.close();
+
+  // Wait for images to load before printing
+  const waitForImages = () => {
+    const images = printWindow.document.querySelectorAll('img');
+    let loadedCount = 0;
+    let totalImages = images.length;
+
+    if (totalImages === 0) {
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
+      return;
+    }
+
+    Array.from(images).forEach((img: any) => {
+      if (img.complete) {
+        loadedCount++;
+        if (loadedCount === totalImages) {
+          setTimeout(() => {
+            printWindow.print();
+          }, 500);
+        }
+      } else {
+        img.onload = () => {
+          loadedCount++;
+          if (loadedCount === totalImages) {
+            setTimeout(() => {
+              printWindow.print();
+            }, 500);
+          }
+        };
+        img.onerror = () => {
+          loadedCount++;
+          if (loadedCount === totalImages) {
+            setTimeout(() => {
+              printWindow.print();
+            }, 500);
+          }
+        };
+      }
+    });
+  };
+
+  setTimeout(waitForImages, 500);
 }

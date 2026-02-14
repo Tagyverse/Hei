@@ -610,18 +610,7 @@ export default function VirtualTryOn({ isOpen, onClose, product: initialProduct 
           </>
         )}
 
-        <div className="absolute top-4 sm:top-6 right-3 sm:right-4 z-30 flex flex-col gap-2 sm:gap-3">
-          {useLiveCamera && (
-            <button
-              onClick={flipCamera}
-              className="bg-black/60 hover:bg-black/80 backdrop-blur-md text-white p-2.5 sm:p-3 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 border border-white/20"
-              disabled={isLoading}
-              title="Flip Camera"
-            >
-              <RotateCw className="w-5 h-5 sm:w-6 sm:h-6" />
-            </button>
-          )}
-        </div>
+
 
         <div className="absolute top-4 sm:top-6 left-3 sm:left-4 z-30 flex flex-col gap-2 sm:gap-3">
           <button

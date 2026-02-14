@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { X, Package, CheckCircle, Clock, Truck, Loader } from 'lucide-react';
+import { X, Package, CheckCircle, Clock, Truck, Loader, Download, Printer } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
 import { ref, get } from 'firebase/database';
+import { downloadBillAsPDF, downloadBillAsJPG, printBill, fetchDeliveryCharge } from '../utils/billGenerator';
+import { trackBillDownload } from '../utils/analytics';
 
 interface Order {
   id: string;
@@ -33,6 +35,7 @@ interface OrderItem {
   subtotal: number;
   selected_size?: string | null;
   selected_color?: string | null;
+  product_image?: string | null;
 }
 
 interface MyOrdersSheetProps {
@@ -46,12 +49,39 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
+  const [downloadingJPG, setDownloadingJPG] = useState(false);
+  const [billSettings, setBillSettings] = useState<any>(null);
+  const [deliveryCharge, setDeliveryCharge] = useState<number>(0);
 
   useEffect(() => {
     if (isOpen && user) {
       fetchOrders();
+      loadBillSettings();
+      loadDeliveryCharge();
     }
   }, [isOpen, user]);
+
+  const loadBillSettings = () => {
+    try {
+      const saved = localStorage.getItem('billSettings');
+      if (saved) {
+        setBillSettings(JSON.parse(saved));
+      }
+    } catch (error) {
+      console.error('Error loading bill settings:', error);
+    }
+  };
+
+  const loadDeliveryCharge = async () => {
+    try {
+      const charge = await fetchDeliveryCharge(db);
+      setDeliveryCharge(charge);
+      console.log('[v0] Delivery charge loaded:', charge);
+    } catch (error) {
+      console.warn('[v0] Could not load delivery charge:', error);
+    }
+  };
 
   const fetchOrders = async () => {
     if (!user) return;
@@ -120,6 +150,41 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
       default:
         return status.charAt(0).toUpperCase() + status.slice(1);
     }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!selectedOrder) return;
+    setDownloadingPDF(true);
+    try {
+      await downloadBillAsPDF(selectedOrder, { site_name: 'Hei', contact_email: '', contact_phone: '' }, deliveryCharge, billSettings);
+      // Track download (fire and forget - don't block UI)
+      trackBillDownload(selectedOrder.id, 'pdf');
+    } catch (error) {
+      console.error('[v0] Error downloading PDF:', error);
+    } finally {
+      setDownloadingPDF(false);
+    }
+  };
+
+  const handleDownloadJPG = async () => {
+    if (!selectedOrder) return;
+    setDownloadingJPG(true);
+    try {
+      await downloadBillAsJPG(selectedOrder, { site_name: 'Hei', contact_email: '', contact_phone: '' }, deliveryCharge, billSettings);
+      // Track download (fire and forget - don't block UI)
+      trackBillDownload(selectedOrder.id, 'jpg');
+    } catch (error) {
+      console.error('[v0] Error downloading JPG:', error);
+    } finally {
+      setDownloadingJPG(false);
+    }
+  };
+
+  const handlePrint = () => {
+    if (!selectedOrder) return;
+    printBill(selectedOrder, { site_name: 'Hei', contact_email: '', contact_phone: '' }, deliveryCharge, billSettings);
+    // Track download (fire and forget - don't block UI)
+    trackBillDownload(selectedOrder.id, 'print');
   };
 
   if (!isOpen) return null;
@@ -290,6 +355,45 @@ export default function MyOrdersSheet({ isOpen, onClose, onLoginClick }: MyOrder
                 <div className="flex justify-between items-center">
                   <p className="font-semibold">Total Amount</p>
                   <p className="text-2xl font-bold">₹{Number(selectedOrder.total_amount).toFixed(2)}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-gray-700">Download or Print Bill</p>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <button
+                    onClick={handleDownloadPDF}
+                    disabled={downloadingPDF}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-xl transition-colors font-semibold text-sm sm:text-base"
+                  >
+                    {downloadingPDF ? (
+                      <Loader className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                    <span className="hidden sm:inline">PDF</span>
+                  </button>
+
+                  <button
+                    onClick={handleDownloadJPG}
+                    disabled={downloadingJPG}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white rounded-xl transition-colors font-semibold text-sm sm:text-base"
+                  >
+                    {downloadingJPG ? (
+                      <Loader className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                    <span className="hidden sm:inline">JPG</span>
+                  </button>
+
+                  <button
+                    onClick={handlePrint}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-xl transition-colors font-semibold text-sm sm:text-base"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span className="hidden sm:inline">Print</span>
+                  </button>
                 </div>
               </div>
             </div>

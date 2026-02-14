@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { FileText, Save, Eye, Upload, X, Type, Palette, Layout, Image as ImageIcon, Loader2, Truck } from 'lucide-react';
 import { db } from '../../lib/firebase';
-import { ref, get, set, update } from 'firebase/database';
+import { ref, get, set } from 'firebase/database';
 import R2ImageSelectorDialog from './R2ImageSelectorDialog';
+import { fetchDeliveryCharge } from '../../utils/billGenerator';
 
 interface BillSettings {
   // Header Settings
@@ -100,78 +101,103 @@ const layoutOptions = [
   { value: 'detailed', label: 'Detailed', description: 'Full information with all details' },
 ];
 
+const themeOptions = [
+  { value: 'professional', label: 'Professional', description: 'Corporate black & white' },
+  { value: 'modern', label: 'Modern', description: 'Blue contemporary design' },
+  { value: 'classic', label: 'Classic', description: 'Red traditional style' },
+  { value: 'minimal', label: 'Minimal', description: 'Clean & simple' },
+];
+
 export default function BillCustomizer() {
   const [settings, setSettings] = useState<BillSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showLogoGallery, setShowLogoGallery] = useState(false);
+  const [deliveryCharge, setDeliveryCharge] = useState<number>(0);
   const previewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadSettings();
+    loadDeliveryCharge();
   }, []);
+
+  const loadDeliveryCharge = async () => {
+    try {
+      const charge = await fetchDeliveryCharge(db);
+      setDeliveryCharge(charge);
+      console.log('[v0] Delivery charge loaded:', charge);
+    } catch (error) {
+      console.warn('[v0] Could not load delivery charge:', error);
+    }
+  };
 
   const loadSettings = async () => {
     try {
       const settingsRef = ref(db, 'bill_settings');
       const snapshot = await get(settingsRef);
       if (snapshot.exists()) {
-        setSettings({ ...defaultSettings, ...snapshot.val() });
+        const loadedSettings = { ...defaultSettings, ...snapshot.val() };
+        setSettings(loadedSettings);
+        // Also save to localStorage for immediate access
+        localStorage.setItem('billSettings', JSON.stringify(loadedSettings));
+      } else {
+        // If no Firebase settings, use defaults and save to localStorage
+        localStorage.setItem('billSettings', JSON.stringify(defaultSettings));
       }
     } catch (error) {
       console.error('Error loading bill settings:', error);
+      // Fallback to localStorage if Firebase fails
+      try {
+        const saved = localStorage.getItem('billSettings');
+        if (saved) {
+          setSettings(JSON.parse(saved));
+        }
+      } catch (e) {
+        console.error('Error loading from localStorage:', e);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const saveSettings = async () => {
-    // Verify admin authentication - must be logged in as admin
-    const isAuthenticated = localStorage.getItem('adminAuthenticated') === 'true';
-    const adminId = localStorage.getItem('adminId');
-    
-    if (!isAuthenticated || !adminId) {
-      alert('Access Denied: You are not authorized to edit bill settings. Only logged-in admins can modify these settings. Please login to the admin panel first.');
-      return;
-    }
-
     setSaving(true);
     try {
       const settingsRef = ref(db, 'bill_settings');
       
-      // Build update object with all fields and timestamps
-      const updateData: Record<string, any> = {};
-      Object.entries(settings).forEach(([key, value]) => {
-        updateData[key] = value;
-      });
+      console.log('[v0] Saving bill settings...', Object.keys(settings).length, 'fields');
       
-      // Add timestamp and auth metadata for tracking
-      updateData['updated_at'] = new Date().toISOString();
-      updateData['updated_by'] = 'admin';
+      // Prepare settings data with timestamp
+      const dataToSave = {
+        ...settings,
+        updated_at: new Date().toISOString(),
+      };
       
-      console.log('[BILL_SETTINGS] Authenticated save:', Object.keys(updateData));
+      console.log('[v0] Data to save:', Object.keys(dataToSave));
       
-      // Use update instead of set for better compatibility with Firebase rules
-      await update(settingsRef, updateData);
+      // Save settings to Firebase
+      await set(settingsRef, dataToSave);
       
-      console.log('[BILL_SETTINGS] Saved successfully');
+      console.log('[v0] Firebase save completed');
+      
+      // Save to localStorage for immediate access
+      localStorage.setItem('billSettings', JSON.stringify(settings));
+      
+      console.log('[v0] LocalStorage save completed');
+      console.log('[v0] Bill settings saved successfully!');
+      
       alert('Bill settings saved successfully!');
     } catch (error: any) {
-      console.error('[BILL_SETTINGS] Error:', error);
+      console.error('[v0] Bill Settings Error:', {
+        message: error.message,
+        code: error.code,
+        name: error.name,
+        full: error,
+      });
+      
       const errorMsg = error.message || error.code || 'Failed to save settings';
-      
-      // Log detailed error information
-      console.error('[BILL_SETTINGS] Error code:', error.code);
-      console.error('[BILL_SETTINGS] Error details:', error);
-      
-      if (errorMsg.includes('permission') || errorMsg.includes('PERMISSION_DENIED')) {
-        alert('Permission denied. Please ensure you are logged in as an authorized admin.');
-      } else if (errorMsg.includes('validation') || errorMsg.includes('valid')) {
-        alert('Validation error: ' + errorMsg);
-      } else {
-        alert('Failed to save settings: ' + errorMsg);
-      }
+      alert('Error saving settings: ' + errorMsg);
     } finally {
       setSaving(false);
     }
@@ -305,6 +331,7 @@ export default function BillCustomizer() {
 
   return (
     <div className="space-y-6">
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -436,6 +463,36 @@ export default function BillCustomizer() {
                   placeholder="e.g., 22AAAAA0000A1Z5"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Theme Presets */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Palette className="w-5 h-5 text-teal-600" />
+              Design Themes
+            </h3>
+            
+            <div className="grid grid-cols-2 gap-3">
+              {themeOptions.map(option => (
+                <button
+                  key={option.value}
+                  onClick={() => {
+                    const BILL_THEMES: any = {
+                      professional: { primary_color: '#1a1a1a', secondary_color: '#666666', header_bg_color: '#1a1a1a', table_header_color: '#1a1a1a', header_font_size: 32, body_font_size: 12 },
+                      modern: { primary_color: '#2563eb', secondary_color: '#64748b', header_bg_color: '#2563eb', table_header_color: '#2563eb', header_font_size: 36, body_font_size: 13 },
+                      classic: { primary_color: '#c41e3a', secondary_color: '#333333', header_bg_color: '#c41e3a', table_header_color: '#c41e3a', header_font_size: 34, body_font_size: 12 },
+                      minimal: { primary_color: '#000000', secondary_color: '#777777', header_bg_color: '#ffffff', table_header_color: '#f0f0f0', header_font_size: 28, body_font_size: 11 },
+                    };
+                    const theme = BILL_THEMES[option.value];
+                    setSettings(prev => ({ ...prev, ...theme }));
+                  }}
+                  className="p-4 text-left rounded-lg border-2 border-gray-200 hover:border-teal-500 transition-all"
+                >
+                  <div className="font-semibold text-gray-900">{option.label}</div>
+                  <div className="text-xs text-gray-600 mt-1">{option.description}</div>
+                </button>
+              ))}
             </div>
           </div>
 

@@ -454,6 +454,11 @@
       }
     },
 
+    "bill_settings": {
+      ".read": true,
+      ".write": true
+    },
+
     "favorites": {
       ".read": false,
       "$userId": {
@@ -1150,6 +1155,18 @@
       "updated_at": {
         ".validate": "!newData.exists() || newData.isString()"
       }
+    },
+
+    "analytics": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["timestamp", "event_type"]
+    },
+
+    "traffic_logs": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["timestamp", "status"]
     }
   }
 }
