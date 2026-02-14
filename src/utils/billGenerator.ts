@@ -1193,4 +1193,3 @@ export function printBill(order: Order, siteSettings: SiteSettings, shippingChar
 
   setTimeout(waitForImages, 500);
 }
-}
