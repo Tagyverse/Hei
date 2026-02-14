@@ -975,9 +975,17 @@ export function generateBillHTML(order: Order, siteSettings: SiteSettings, shipp
           if (item.selected_size) details.push(`Size: ${item.selected_size}`);
           if (item.selected_color) details.push(`Color: ${item.selected_color}`);
           const detailsHTML = details.length > 0 ? `<span>${details.join(' • ')}</span>` : '';
-          const imageHTML = s.show_product_images && item.product_image 
-            ? `<img src="${item.product_image}" alt="${item.product_name}" class="product-image" crossorigin="anonymous" onerror="this.style.display='none'" />`
-            : '';
+          
+          // Build image HTML with CORS support and proper error handling
+          let imageHTML = '';
+          if (s.show_product_images && item.product_image) {
+            // Encode URL to handle special characters
+            const encodedImageUrl = item.product_image.includes('blob:') 
+              ? item.product_image 
+              : encodeURI(item.product_image);
+            
+            imageHTML = `<img src="${encodedImageUrl}" alt="${item.product_name}" class="product-image" crossorigin="anonymous" loading="eager" onload="this.style.opacity='1'" onerror="this.parentElement.style.gap='0'; this.remove();" style="opacity: 0.8;" />`;
+          }
 
           return `
           <tr>
